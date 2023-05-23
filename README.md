@@ -1,3 +1,4 @@
+
 # Open-Assistant-Chinese.ver
 
 > hugging chat 更新了，需要登录才行，登录后获取唯一用户token并给予长时间有效的hf-chat session
@@ -25,7 +26,7 @@ from OpenAssistant import OpenAssistant
 from YDTranslate import Translater
 
 tranlater = Translater.Translater(hot=True) #使用默认参数的有道翻译，不重新请求key
-assistant = OpenAssistant.OpenAssistant(username, tranlater) #username为mysql数据库中用户的名字
+assistant = OpenAssistant.OpenAssistant(email, tranlater) #email为huggingchat的登录邮箱
 assistant.init()
 ```
 
