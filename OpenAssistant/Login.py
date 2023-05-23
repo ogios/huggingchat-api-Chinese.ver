@@ -125,6 +125,7 @@ class Login:
 			print("done")
 	
 if __name__ == "__main__":
-
+	email = ""
+	passwd = ""
 	log = Login(email, passwd)
 	log.main()

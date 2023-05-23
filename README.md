@@ -1,11 +1,6 @@
-
 # Open-Assistant-Chinese.ver
 
 > hugging chat 更新了，需要登录才行，登录后获取唯一用户token并给予长时间有效的hf-chat session
-
-> there's an update in huggingchat, which requires user to sign in (token and hf-chat cookies are required to send request).
-
-这个Open-Assistant模型现阶段几乎没有任何作用，不过可以本地部署与实现。
 
 ## 说明
 
