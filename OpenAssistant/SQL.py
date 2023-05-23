@@ -24,7 +24,7 @@ class BaseModel(peewee.Model):
 		database = db
 
 class User(BaseModel):
-	username = peewee.CharField(primary_key=True)
+	email = peewee.CharField(primary_key=True)
 	passwd = peewee.CharField()
 	cookies = peewee.TextField()
 	class Meta:

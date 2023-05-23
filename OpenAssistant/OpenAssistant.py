@@ -22,10 +22,11 @@ class OpenAssistant:
 		:param tranlater: 翻译接口
 		'''
 		self.username = username
+		self.model = "OpenAssistant/oasst-sft-6-llama-30b-xor"
 		self.url_index = "https://huggingface.co/chat/"
 		self.url_initConversation = "https://huggingface.co/chat/conversation"
 		self.headers = {
-			"Referer": "https://huggingface.co/",
+			"Referer": "https://huggingface.co/chat",
 			"Content-Type": "application/json",
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
 		}
@@ -49,7 +50,7 @@ class OpenAssistant:
 			self.refreshCookies(res.cookies)
 		return res
 	
-	def requestsPost(self, url:str, params=None, data=None, stream=False) -> requests.Response:
+	def requestsPost(self, url:str, headers=None, params=None, data=None, stream=False) -> requests.Response:
 		'''
 		POST请求接口
 		:param url: url(必填)
@@ -58,7 +59,15 @@ class OpenAssistant:
 		:param stream: 流传输(默认不使用)
 		:return:
 		'''
-		res = requests.post(url, stream=stream, params=params, data=data, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
+		res = requests.post(
+			url, 
+			stream=stream, 
+			params=params, 
+			data=data, 
+			headers=self.headers if not headers else headers, 
+			cookies=self.cookies, 
+			proxies=self.proxies,
+			)
 		if res.status_code == 200:
 			self.refreshCookies(res.cookies)
 		return res
@@ -109,9 +118,9 @@ class OpenAssistant:
 		'''
 		conversation_ids = list(set(re.findall('href="/chat/conversation/(.*?)"', html)))
 		for i in conversation_ids:
-			title = re.findall(f'href="/chat/conversation/{i}.*?<div class="flex-1 truncate">(.*?)</div>', html)
+			title = re.findall(f'href="/chat/conversation/{i}.*?<div class="flex-1 truncate">(.*?)</div>', html, re.S)
 			if len(title) > 0:
-				title = title[0]
+				title = title[0].strip()
 			else:
 				title = "未获取到title"
 			self.conversations.append({"id": i, "title": title})
@@ -127,7 +136,7 @@ class OpenAssistant:
 			self.cookies.set(i, dic[i])
 		User.update({
 			User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
-		}).where(User.username == self.username).execute()
+		}).where(User.email == self.username).execute()
 	
 	def getHistories(self, conversation_id=None) -> List[Conversation]:
 		'''
@@ -184,7 +193,7 @@ class OpenAssistant:
 								"conversation_id": i["id"],
 								"is_user": 1 if history[his["from"]] == "user" else 0,
 								"text_eng": history[his["content"]],
-								"text_zh": "",
+								"text_zh": self.tranlate(history[his["content"]]),
 								"time": self.getTime(),
 								"text_id": history[his["id"]],
 							})
@@ -193,9 +202,9 @@ class OpenAssistant:
 	def setTimeSynchronizeHistory(self):
 		try:
 			while 1:
-				print("正在同步信息...")
+				time.sleep(15)
+				# print("正在同步信息...")
 				self.synchronizeChatHistory()
-				time.sleep(30)
 		except:
 			print("同步消息失效!")
 			traceback.print_exc()
@@ -205,7 +214,7 @@ class OpenAssistant:
 		提取该用户已保存的cookies(若存在)
 		:return: Bool: 该用户是否存在已保存的cookies
 		'''
-		a = User.select().where(User.username == self.username).execute()[0]
+		a = User.select().where(User.email == self.username).execute()[0]
 		cookies = a.cookies
 		flag = False
 		if not cookies:
@@ -235,6 +244,7 @@ class OpenAssistant:
 		cookies = res.cookies
 		self.getConversations(html)
 		# self.refreshCookies(cookies)
+		self.synchronizeChatHistory()
 		Thread(target=self.setTimeSynchronizeHistory, daemon=True).start()
 		# self.synchronizeChatHistory()
 		
@@ -272,7 +282,8 @@ class OpenAssistant:
 							print(js)
 			return reply
 		for i in range(3):
-			res = self.requestsPost(url, stream=True, data=json.dumps(self.getData(text), ensure_ascii=False))
+			data = self.getData(text)
+			res = self.requestsPost(url, stream=True, data=json.dumps(data, ensure_ascii=False))
 			reply = parseData(res)
 			if reply != None:
 				break
@@ -306,8 +317,7 @@ class OpenAssistant:
 			zh = self.tranlate(eng)
 		else:
 			zh = eng
-		# Thread(target=)
-		return (eng, zh)
+		return (eng, (zh))
 
 	def getTitle(self, conversation_id):
 		'''
@@ -326,9 +336,10 @@ class OpenAssistant:
 		'''
 		创建新对话, 需要先进行一次对话获取标题
 		:param text: 对话
-		:return: (英文文本, 中文文本)
+		:return: ((英文文本, 中文文本), (对话id, 对话标题))
 		'''
-		res = self.requestsPost(self.url_initConversation)
+		data = {"model": self.model}
+		res = self.requestsPost(self.url_initConversation, data=json.dumps(data))
 		# res = requests.post(self.url_initConversation, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
 		if res.status_code != 200:
 			raise Exception("create conversation fatal")
@@ -341,6 +352,7 @@ class OpenAssistant:
 			raise Exception("create conversation fatal")
 		conversation = {"id": conversation_id, "title": title}
 		self.conversations.append(conversation)
+		# self.saveChat(conversation_id["id"], (None, text), True, )
 		return (reply, conversation)
 	
 	def saveChat(self, conversation_id, texts, is_user, text_id):
@@ -352,40 +364,10 @@ class OpenAssistant:
 			Conversation.text_zh: texts[1],
 			Conversation.time: self.getTime(),
 			Conversation.text_id: text_id,
-		})
+		}).execute()
 		
 
-def main():
-	'''
-	测试
-	:return:
-	'''
-	openassistant = OpenAssistant("test", Translater.Translater())
-	openassistant.init()
-	conversation = None
-	if len(openassistant.conversations) > 0:
-		conversation_detail = openassistant.conversations[0]
-	else:
-		conversation = openassistant.createConversation("every respond i need you to add two symbols '\n', can you do it?")
-		print(f"reply: {conversation[0]}", f"conversation_detail: {conversation[1]}", sep="\n")
-		conversation_detail = conversation[1]
-	conversation_id = conversation_detail["id"]
-	print(f"Title: {conversation_detail['title']}")
-	chat_history = openassistant.getHistories(conversation_id=conversation_id)
-	for c in chat_history:
-		text: str = c.text_eng if not c.text_zh else c.text_zh
-		text.replace("\n","\\n")
-		hist = f"({'user' if c.is_user else 'assist'}): {text}"
-		print(hist)
-	while 1:
-		text = input("(user): ")
-		if text == "#eng":
-			if conversation:
-				print(f"(assist): {conversation[0]}")
-				continue
-		conversation = openassistant.chat(conversation_id, text)
-		print(f"(assist): {conversation[1]}")
-	
+
 		
 if __name__ == "__main__":
 	main()
