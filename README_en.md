@@ -35,8 +35,8 @@ CREATETABLE `user`  (
   `email`varchar(255) CHARACTERSET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `passwd`varchar(255) CHARACTERSET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `cookies`textCHARACTERSET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
-  PRIMARY KEY (`username`) USING BTREE,
-  UNIQUEINDEX`unique_id`(`username`ASC) USING BTREE
+  PRIMARY KEY (`email`) USING BTREE,
+  UNIQUEINDEX`unique_id`(`email`ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTERSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 CREATETABLE `conversation`  (
