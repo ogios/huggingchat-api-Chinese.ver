@@ -1,5 +1,7 @@
 # Open-Assistant-Chinese.ver
 
+中文 | [English](README_en.md)
+
 > hugging chat 更新了，需要登录才行，登录后获取唯一用户token并给予长时间有效的hf-chat session
 
 ## 说明
