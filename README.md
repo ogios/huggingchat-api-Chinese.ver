@@ -8,6 +8,8 @@
 
 稍微小提一嘴，huggingface的登录竟然是明文诶，没任何加密
 
+如果可以的话给个⭐呗🥺
+
 ## 说明
 
 我这里抓包的是huggingface的网页接口，模型是OpenAssistant/oasst-sft-6-llama-30b
