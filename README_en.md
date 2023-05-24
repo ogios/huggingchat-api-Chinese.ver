@@ -4,6 +4,10 @@
 
 Using hugging-chat web API, the model that is currently available is open-assistant's model called oasst-sft-6-llama-30b
 
+you need to create the database and two tables before sign in into huggingface using `Login(email, passwd).main()` since it would automaticly save your email, password and cookies into the table called `user`.
+
+leave a star if you like it🥺.
+
 ## Translator
 
 since the model only replies in english even if it's able to process chinese, i decided to add a plugin for it, which is a translator provided by Youdao.
