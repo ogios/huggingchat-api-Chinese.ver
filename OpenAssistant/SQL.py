@@ -5,6 +5,7 @@ import json
 import os
 
 
+
 def initDB():
 	# global db
 	PATH = os.path.dirname(__file__)
@@ -48,7 +49,7 @@ if __name__ == "__main__":
 	# }).execute()
 	# print(res)
 	a = User.select().execute()[0]
-	print(a.username)
+	print(a.email)
 	# for u in a:
 	# 	print(u.id, u.username, u.passwd, u.cookies)
 	

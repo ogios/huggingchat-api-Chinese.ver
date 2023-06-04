@@ -1,27 +1,30 @@
 import datetime
+import logging
+import sys
 import time
 import traceback
 import uuid
-from threading import Thread
-from typing import List
-
 import requests
 import requests.utils
 import requests.sessions
 import json
 import re
+from threading import Thread
+from OpenAssistant.History import History_SQL, History
 from YDTranslate import Translater
-from OpenAssistant.SQL import User, Conversation
-
+from .WSServer import WSOut
 
 
 class OpenAssistant:
-	def __init__(self, username, tranlater:Translater.Translater):
-		'''
-		:param username: 用户昵称(非open-assistant，而是数据库中表里存的)
-		:param tranlater: 翻译接口
-		'''
-		self.username = username
+	def __init__(
+			self,
+			email: str,
+			cookies: requests.sessions.RequestsCookieJar,
+			tranlater: Translater.Translater = None,
+			mysql: bool = False
+	):
+		
+		self.email = email
 		self.model = "OpenAssistant/oasst-sft-6-llama-30b-xor"
 		self.url_index = "https://huggingface.co/chat/"
 		self.url_initConversation = "https://huggingface.co/chat/conversation"
@@ -30,27 +33,83 @@ class OpenAssistant:
 			"Content-Type": "application/json",
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
 		}
-		self.proxies = {
-			"http": "http://127.0.0.1:7890",
-			"https": "http://127.0.0.1:7890"
-		}
-		self.tranlater = tranlater
-		self.cookies = requests.sessions.RequestsCookieJar()
+		# self.proxies = {
+		# 	"http": "http://127.0.0.1:7890",
+		# 	"https": "http://127.0.0.1:7890"
+		# }
+		self.translater = tranlater
+		self.cookies = cookies
 		self.conversations = list()
+		self.mysql = mysql
+		self.current_conversation = None
+		self.WSOut = WSOut()
+		self.wsurl = self.WSOut.getUrl()
+		self.History = None
+	
+	def init(self):
+		'''
+		Open-Assistant接口初始化总方法：
+		1. 数据库中提取已保存cookies
+		2. 提取已有对话
+		3. 同步对话
+		:return: 无
+		'''
+		self.fetchConversations()
+		self.setTimeSynchronizeHistory()
+	
+	def setTimeSynchronizeHistory(self):
+		def loop():
+			try:
+				while 1:
+					time.sleep(15)
+					# print("正在同步信息...")
+					self.History.synchronizeChatHistory()
+			except:
+				print("同步消息失效!")
+				traceback.print_exc()
 		
-	def requestsGet(self, url:str, params=None) -> requests.Response:
+		if self.mysql:
+			self.History = History_SQL(self.email, self)
+			self.History.synchronizeChatHistory()
+			Thread(target=loop, daemon=True).start()
+		else:
+			self.History = History(self.email, self)
+	
+	def fetchConversations(self):
+		'''
+		从 html 中提取 huggingface 服务器上已有的所有对话id
+		:return: 无，将conversation以 id 与 title 的键值对形式存储
+		'''
+		res = self.requestsGet(self.url_index)
+		html = res.text
+		conversation_ids = list(set(re.findall('href="/chat/conversation/(.*?)"', html)))
+		for i in conversation_ids:
+			title = re.findall(f'href="/chat/conversation/{i}.*?<div class="flex-1 truncate">(.*?)</div>', html, re.S)
+			if len(title) > 0:
+				title = title[0].strip()
+			else:
+				title = "未获取到title"
+			self.conversations.append({"id": i, "title": title})
+	
+	def requestsGet(self, url: str, params=None) -> requests.Response:
 		'''
 		GET请求接口
 		:param url: url(必填)
 		:param params: params(非必须)
 		:return: Response
 		'''
-		res = requests.get(url, params=params, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
-		if res.status_code == 200:
-			self.refreshCookies(res.cookies)
+		res = requests.get(
+			url,
+			params=params,
+			headers=self.headers,
+			cookies=self.cookies,
+			# proxies=self.proxies
+		)
+		# if (res.status_code == 200) & (self.mysql):
+		# 	self.refreshCookies(res.cookies)
 		return res
 	
-	def requestsPost(self, url:str, headers=None, params=None, data=None, stream=False) -> requests.Response:
+	def requestsPost(self, url: str, headers=None, params=None, data=None, stream=False) -> requests.Response:
 		'''
 		POST请求接口
 		:param url: url(必填)
@@ -60,16 +119,16 @@ class OpenAssistant:
 		:return:
 		'''
 		res = requests.post(
-			url, 
-			stream=stream, 
-			params=params, 
-			data=data, 
-			headers=self.headers if not headers else headers, 
-			cookies=self.cookies, 
-			proxies=self.proxies,
-			)
-		if res.status_code == 200:
-			self.refreshCookies(res.cookies)
+			url,
+			stream=stream,
+			params=params,
+			data=data,
+			headers=self.headers if not headers else headers,
+			cookies=self.cookies,
+			# proxies=self.proxies,
+		)
+		# if (res.status_code == 200) & (self.mysql):
+		# 	self.refreshCookies(res.cookies)
 		return res
 	
 	def getUUID(self):
@@ -110,190 +169,57 @@ class OpenAssistant:
 		}
 		return data
 	
-	def getConversations(self, html):
-		'''
-		从 html 中提取 huggingface 服务器上已有的所有对话id
-		:param html: huggingface请求主页，conversation并没有正式接口，只能通过html提取
-		:return: 无，将conversation以 id 与 title 的键值对形式存储
-		'''
-		conversation_ids = list(set(re.findall('href="/chat/conversation/(.*?)"', html)))
-		for i in conversation_ids:
-			title = re.findall(f'href="/chat/conversation/{i}.*?<div class="flex-1 truncate">(.*?)</div>', html, re.S)
-			if len(title) > 0:
-				title = title[0].strip()
-			else:
-				title = "未获取到title"
-			self.conversations.append({"id": i, "title": title})
-			
-	def refreshCookies(self, cookies:requests.sessions.RequestsCookieJar):
-		'''
-		用于请求完后刷新和维持cookie
-		:param cookies: 请求后的cookie，从 Response.cookies 中提取
-		:return: 无
-		'''
-		dic = cookies.get_dict()
-		for i in dic:
-			self.cookies.set(i, dic[i])
-		User.update({
-			User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
-		}).where(User.email == self.username).execute()
-	
-	def getHistories(self, conversation_id=None) -> List[Conversation]:
-		'''
-		从在数据库中已保存的conversation中按用户名提取所有对话
-		:return: List[User记录]
-		'''
-		if conversation_id != None:
-			return Conversation.select().where(
-				Conversation.username == self.username and Conversation.conversation_id == conversation_id
-			).execute()
-		return Conversation.select().where(Conversation.username == self.username).execute()
-		
-	def getHistoyTextId(self):
-		'''
-		从所有conversation中提取每句话的对话id
-		:return: List[对话id]
-		'''
-		# histories:List[Conversation] = self.getHistories()
-		histories = Conversation.select(Conversation.text_id).where(Conversation.username == self.username).execute()
-		return [c.text_id for c in histories]
-
 	def getTime(self):
 		return str(datetime.datetime.now())
 	
-	def synchronizeChatHistory(self):
-		'''
-		根据huggingface服务器保存的对话记录保存至数据库中
-		:return: 无
-		'''
-		
-		# 单个用户所有记录
-		histories = []
-		existed_texts = self.getHistoyTextId()
-		for i in self.conversations:
-			url = self.url_initConversation + f"/{i['id']}/__data.json?x-sveltekit-invalidated=_1"
-			res = self.requestsGet(url)
-			# res = requests.get(url, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
-			if res.status_code != 200:
-				print("synchronize chat history fatal")
-			# self.refreshCookies(res.cookies)
-			data = res.json()["nodes"]
-			history = None
-			for dic in data:
-				if dic.__contains__("data"):
-					history = dic["data"]
-			if history:
-				for his in history:
-					if isinstance(his, dict):
-						if his.__contains__("content"):
-							if history[his["id"]] in existed_texts:
-								continue
-							histories.append({
-								"username": self.username,
-								"conversation_id": i["id"],
-								"is_user": 1 if history[his["from"]] == "user" else 0,
-								"text_eng": history[his["content"]],
-								"text_zh": self.tranlate(history[his["content"]]),
-								"time": self.getTime(),
-								"text_id": history[his["id"]],
-							})
-		Conversation.insert_many(histories).execute()
-		
-	def setTimeSynchronizeHistory(self):
-		try:
-			while 1:
-				time.sleep(15)
-				# print("正在同步信息...")
-				self.synchronizeChatHistory()
-		except:
-			print("同步消息失效!")
-			traceback.print_exc()
-		
-	def getCookiesFromDB(self):
-		'''
-		提取该用户已保存的cookies(若存在)
-		:return: Bool: 该用户是否存在已保存的cookies
-		'''
-		a = User.select().where(User.email == self.username).execute()[0]
-		cookies = a.cookies
-		flag = False
-		if not cookies:
-			pass
-		elif "{" in cookies and "}" in cookies:
-			print("正在调用已保存的cookie")
-			cookies = json.loads(cookies)
-			for i in cookies:
-				if i == "hf-chat":
-					flag = True
-				self.cookies.set(i, cookies[i])
-		return flag
+	def parseData(self, res: requests.Response, conversation_id):
+		if res.status_code != 200:
+			raise Exception("chat fatal")
+		reply = None
+		for c in res.iter_content(chunk_size=1024):
+			chunks = c.decode("utf-8").split("\n\n")
+			tempchunk = ""
+			for chunk in chunks:
+				if chunk:
+					chunk = tempchunk + re.sub("^data:", "", chunk)
+					try:
+						js = json.loads(chunk)
+						tempchunk = ""
+					except:
+						tempchunk = chunk
+						continue
+					try:
+						if (js["token"]["special"] == True) & (js["generated_text"] != None):
+							reply = js["generated_text"]
+							reply = self.tranlate(reply)
+							self.WSOut.sendMessage(status=True, msg=reply, user="Open-Assistant",
+							                       conversation_id=conversation_id)
+						else:
+							reply = js["token"]["text"]
+							self.WSOut.sendMessage(status=False, msg=reply, user="Open-Assistant",
+							                       conversation_id=conversation_id)
+					except:
+						print(js)
+		return reply
 	
-	def init(self):
-		'''
-		Open-Assistant接口初始化总方法：
-		1. 数据库中提取已保存cookies
-		2. 提取已有对话
-		3. 同步对话
-		:return: 无
-		'''
-		self.getCookiesFromDB()
-		res = self.requestsGet(self.url_index)
-		# res = requests.get(self.url_index, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
-		# print(res)
-		html = res.text
-		cookies = res.cookies
-		self.getConversations(html)
-		# self.refreshCookies(cookies)
-		self.synchronizeChatHistory()
-		Thread(target=self.setTimeSynchronizeHistory, daemon=True).start()
-		# self.synchronizeChatHistory()
-		
-		
-	def getReply(self, conversation, text):
+	def getReply(self, conversation_id, text):
 		'''
 		对话入口
-		:param conversation: conversation_id
+		:param conversation_id: conversation_id
 		:param text: 语句
 		:return: 回复(使用流获取但并不以流形式返回)
 		'''
-		url = self.url_initConversation + f"/{conversation}"
-		# res = self.requestsPost(url, stream=True, data=json.dumps(self.getData(text), ensure_ascii=False))
+		url = self.url_initConversation + f"/{conversation_id}"
 		reply = None
-		def parseData(res:requests.Response):
-			if res.status_code != 200:
-				raise Exception("chat fatal")
-			reply = None
-			for c in res.iter_content(chunk_size=1024):
-				chunks = c.decode("utf-8").split("\n\n")
-				tempchunk = ""
-				for chunk in chunks:
-					if chunk:
-						chunk = tempchunk + re.sub("^data:", "", chunk)
-						try:
-							js = json.loads(chunk)
-							tempchunk = ""
-						except:
-							tempchunk = chunk
-							continue
-						try:
-							if (js["token"]["special"] == True) & (js["generated_text"] != None):
-								reply = js["generated_text"]
-						except:
-							print(js)
-			return reply
+		
 		for i in range(3):
 			data = self.getData(text)
 			res = self.requestsPost(url, stream=True, data=json.dumps(data, ensure_ascii=False))
-			reply = parseData(res)
+			reply = self.parseData(res, conversation_id=conversation_id)
 			if reply != None:
 				break
-		# res = requests.post(url, headers=self.headers, data=json.dumps(self.getData(text), ensure_ascii=False), proxies=self.proxies)
 		if reply == None:
 			raise Exception("No reply")
-		# js = res.json()
-		# reply = ""
-		# for i in js:
-		# 	reply += i["generated_text"]
 		return reply
 	
 	def tranlate(self, text):
@@ -302,23 +228,30 @@ class OpenAssistant:
 		:param text:  英文文本
 		:return: 中文文本
 		'''
-		text = self.tranlater.translate(text)
+		text = self.translater.translate(text)
 		return text
 	
-	def chat(self, conversation, text):
+	def chat(self, text: str, conversation_id=None):
 		'''
 		外都对话接口
-		:param conversation: conversation_id
+		:param conversation_id: conversation_id
 		:param text: 文本
 		:return: (英文文本, 中文文本)
 		'''
-		eng = self.getReply(conversation, text)
-		if len(re.findall("[a-zA-Z]", eng)) > 0:
-			zh = self.tranlate(eng)
-		else:
-			zh = eng
-		return (eng, (zh))
-
+		conversation_id = self.current_conversation if not conversation_id else conversation_id
+		if not conversation_id:
+			logging.debug("No conversation selected")
+			return None
+		self.WSOut.sendMessage(status=True, msg=text, user="user", conversation_id=conversation_id)
+		self.getReply(conversation_id, text)
+	
+	# eng = self.getReply(conversation, text)
+	# if len(re.findall("[a-zA-Z]", eng)) > 0:
+	# 	zh = self.tranlate(eng)
+	# else:
+	# 	zh = eng
+	# return (eng, (zh))
+	
 	def getTitle(self, conversation_id):
 		'''
 		获取该对话的标题
@@ -340,35 +273,54 @@ class OpenAssistant:
 		'''
 		data = {"model": self.model}
 		res = self.requestsPost(self.url_initConversation, data=json.dumps(data))
-		# res = requests.post(self.url_initConversation, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
 		if res.status_code != 200:
 			raise Exception("create conversation fatal")
-		# self.refreshCookies(res.cookies)
 		js = res.json()
 		conversation_id = js["conversationId"]
-		reply = self.chat(conversation_id, text)
+		self.chat(text, conversation_id)
 		title = self.getTitle(conversation_id)
-		if not reply[0] and not title:
+		if not title:
 			raise Exception("create conversation fatal")
 		conversation = {"id": conversation_id, "title": title}
 		self.conversations.append(conversation)
-		# self.saveChat(conversation_id["id"], (None, text), True, )
-		return (reply, conversation)
+		# return (reply, conversation)
+		self.current_conversation = conversation_id
+		return title
 	
-	def saveChat(self, conversation_id, texts, is_user, text_id):
-		Conversation.insert({
-			Conversation.username: self.username,
-			Conversation.conversation_id: conversation_id,
-			Conversation.is_user: is_user,
-			Conversation.text_eng: texts[0],
-			Conversation.text_zh: texts[1],
-			Conversation.time: self.getTime(),
-			Conversation.text_id: text_id,
-		}).execute()
-		
+	def getHistoriesByID(self, conversation_id=None):
+		conversation_id = self.current_conversation if not conversation_id else conversation_id
+		if not conversation_id:
+			return []
+		logging.debug(f"Getting histories for {self.email}:{conversation_id}...")
+		histories = self.History.getHistoriesByID(conversation_id)
+		if histories == None:
+			raise Exception("Something went wrong")
+		else:
+			
+			return histories
+	
+	def getConversations(self):
+		return self.conversations
+	
+	def getTextFromInput(self):
+		while 1:
+			text = input(f"({self.current_conversation}) > ")
+			if not text:
+				continue
+			else:
+				return text
+	
+	def switchConversation(self, option: int):
+		self.current_conversation = self.conversations[option]["id"]
+	
+	def printOutConversations(self):
+		string = "* Conversations that have been established: \n\n"
+		for i in range(len(self.conversations)):
+			string += f"	{i}. {self.conversations[i]['title']}\n"
+		string += "\n"
+		return string
 
 
-		
 if __name__ == "__main__":
-	main()
-		
+	# main()
+	pass

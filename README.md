@@ -2,6 +2,8 @@
 
 中文 | [English](README_en.md)
 
+> 2023.6.4-22:46: 今天为之后的大更新铺垫了很多，重新构建了整个框架，但是调整说明明天再说，这会太晚了
+
 > hugging chat 更新了，需要登录才行，登录后获取唯一用户token并给予长时间有效的hf-chat session
 
 ## 说明
@@ -120,44 +122,47 @@ CREATE TABLE `conversation`  (
 对于GET与POST请求分别套了两个方法，并配合refreshCookies()进行cookies的持久化
 
 ```python
-	def requestsGet(self, url:str, params=None) -> requests.Response:
-		'''
-		GET请求接口
-		:param url: url(必填)
-		:param params: params(非必须)
-		:return: Response
-		'''
-		res = requests.get(url, params=params, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
-		if res.status_code == 200:
-			self.refreshCookies(res.cookies)
-		return res
+    def requestsGet(self, url: str, params=None) -> requests.Response:
+	'''
+    GET请求接口
+    :param url: url(必填)
+    :param params: params(非必须)
+    :return: Response
+    '''
+	res = requests.get(url, params=params, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
+	if res.status_code == 200:
+		self.refreshCookies(res.cookies)
+	return res
 
-	def requestsPost(self, url:str, params=None, data=None, stream=False) -> requests.Response:
-		'''
-		POST请求接口
-		:param url: url(必填)
-		:param params:
-		:param data:
-		:param stream: 流传输(默认不使用)
-		:return:
-		'''
-		res = requests.post(url, stream=stream, params=params, data=data, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
-		if res.status_code == 200:
-			self.refreshCookies(res.cookies)
-		return res
-  
-	def refreshCookies(self, cookies:requests.sessions.RequestsCookieJar):
-		'''
-		用于请求完后刷新和维持cookie
-		:param cookies: 请求后的cookie，从 Response.cookies 中提取
-		:return: 无
-		'''
-		dic = cookies.get_dict()
-		for i in dic:
-			self.cookies.set(i, dic[i])
-		User.update({
-			User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
-		}).where(User.username == self.username).execute()
+
+def requestsPost(self, url: str, params=None, data=None, stream=False) -> requests.Response:
+	'''
+    POST请求接口
+    :param url: url(必填)
+    :param params:
+    :param data:
+    :param stream: 流传输(默认不使用)
+    :return:
+    '''
+	res = requests.post(url, stream=stream, params=params, data=data, headers=self.headers, cookies=self.cookies,
+	                    proxies=self.proxies)
+	if res.status_code == 200:
+		self.refreshCookies(res.cookies)
+	return res
+
+
+def refreshCookies(self, cookies: requests.sessions.RequestsCookieJar):
+	'''
+    用于请求完后刷新和维持cookie
+    :param cookies: 请求后的cookie，从 Response.cookies 中提取
+    :return: 无
+    '''
+	dic = cookies.get_dict()
+	for i in dic:
+		self.cookies.set(i, dic[i])
+	User.update({
+		User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
+	}).where(User.email == self.email).execute()
 ```
 
 ### 对话参数

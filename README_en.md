@@ -1,5 +1,7 @@
 # Open-Assistant-Chinese.ver
 
+> 2023.6.4-22:46: Made a lot of changes today for a big update, but I don't get time to say it now, just gonna wait for tomorrow.
+
 > There's an update in hugging-chat, which requires the user to sign in (token and hf-chat cookies are required to send requests).
 
 Using hugging-chat web API, the model that is currently available is open-assistant's model called oasst-sft-6-llama-30b
@@ -119,44 +121,47 @@ the return format of `chat()` and `createConversation()`:
 ### Request and Cookies
 
 ```python
-    def requestsGet(self, url:str, params=None) -> requests.Response:
-        '''
-        GET Request
-        :param url
-        :param params
-        :return: Response
-        '''
-        res = requests.get(url, params=params, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
-        if res.status_code == 200:
-            self.refreshCookies(res.cookies)
-        return res
+    def requestsGet(self, url: str, params=None) -> requests.Response:
+	'''
+    GET Request
+    :param url
+    :param params
+    :return: Response
+    '''
+	res = requests.get(url, params=params, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
+	if res.status_code == 200:
+		self.refreshCookies(res.cookies)
+	return res
 
-    def requestsPost(self, url:str, params=None, data=None, stream=False) -> requests.Response:
-        '''
-        POST request
-        :param url
-        :param params
-        :param data
-        :param stream
-        :return: Response
-        '''
-        res = requests.post(url, stream=stream, params=params, data=data, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
-        if res.status_code == 200:
-            self.refreshCookies(res.cookies)
-        return res
-  
-    def refreshCookies(self, cookies:requests.sessions.RequestsCookieJar):
-        '''
-	refresh every cookies that returns 
-        :param cookies: Response.cookies
-        :return: None
-        '''
-        dic = cookies.get_dict()
-        for i in dic:
-            self.cookies.set(i, dic[i])
-        User.update({
-            User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
-        }).where(User.username == self.username).execute()
+
+def requestsPost(self, url: str, params=None, data=None, stream=False) -> requests.Response:
+	'''
+    POST request
+    :param url
+    :param params
+    :param data
+    :param stream
+    :return: Response
+    '''
+	res = requests.post(url, stream=stream, params=params, data=data, headers=self.headers, cookies=self.cookies,
+	                    proxies=self.proxies)
+	if res.status_code == 200:
+		self.refreshCookies(res.cookies)
+	return res
+
+
+def refreshCookies(self, cookies: requests.sessions.RequestsCookieJar):
+	'''
+refresh every cookies that returns 
+    :param cookies: Response.cookies
+    :return: None
+    '''
+	dic = cookies.get_dict()
+	for i in dic:
+		self.cookies.set(i, dic[i])
+	User.update({
+		User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
+	}).where(User.email == self.email).execute()
 
 ```
 

@@ -1,26 +1,17 @@
+import logging
+import os
 import re
 import requests
-from OpenAssistant.SQL import User, Conversation
-# from SQL import User
+
 import requests.utils
 import requests.sessions
 import json
 
 
 class Login:
-	def __init__(self, email: str, passwd: str) -> None:
+	def __init__(self, email: str, passwd: str=None, mysql: bool=False) -> None:
 		self.email: str = email
 		self.passwd: str = passwd
-		user =  User.select().where(
-			User.email == self.email
-		).execute()
-		if len(user) == 0:
-			User.insert({
-				User.email: self.email,
-				User.passwd: self.passwd,
-			}).execute()
-
-		
 		self.headers = {
 			"Referer": "https://huggingface.co/",
 			# "Content-Type": "application/json",
@@ -31,6 +22,31 @@ class Login:
 			"https": "http://127.0.0.1:7890"
 		}
 		self.cookies = requests.sessions.RequestsCookieJar()
+		self.mysql = mysql
+		if self.mysql:
+			from OpenAssistant.SQL import User, Conversation
+			self.User = User
+			self.Conversation = Conversation
+			user = User.select().where(
+				User.email == self.email
+			).execute()
+			if len(user) == 0:
+				User.insert({
+					User.email: self.email,
+					User.passwd: self.passwd,
+				}).execute()
+			else:
+				if self.passwd:
+					User.update({
+						User.passwd: self.passwd
+					}).where(User.email == self.email).execute()
+		else:
+			self.COOKIE_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
+			self.COOKIE_PATH = self.COOKIE_DIR + f"/{self.email}.json"
+			if not os.path.exists(self.COOKIE_DIR):
+				logging.debug("Cookie directory not found, creating...")
+				os.makedirs(self.COOKIE_DIR)
+			logging.debug(f"Cookie store path: {self.COOKIE_PATH}")
 		
 	def requestsGet(self, url:str, params=None, allow_redirects=True) -> requests.Response:
 		res = requests.get(
@@ -64,9 +80,6 @@ class Login:
 		dic = cookies.get_dict()
 		for i in dic:
 			self.cookies.set(i, dic[i])
-		User.update({
-			User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
-		}).where(User.email == self.email).execute()
 
 	def SigninWithEmail(self):
 		url = "https://huggingface.co/login"
@@ -118,11 +131,69 @@ class Login:
 		else:
 			return 1
 	
+	# def checkIfAlone(self) -> int:
+	# 	users = self.User.select().execute()
+	# 	return 1 if len(users) == 1 else 0
+	
+	# def checkIfCookieExist(self) -> int:
+	# 	if self.mysql:
+	# 		users = self.User.select().where(
+	# 			self.User.email == self.email
+	# 		).execute()
+	# 		if len(users) == 1:
+	# 			try:
+	# 				self.cookies = json.loads(users[0].cookies)
+	# 				return 1
+	# 			except:
+	# 				return 0
+	# 	else:
+	# 		raise Exception("can")
+			
+	def saveCookies(self):
+		if self.mysql:
+			self.User.update({
+				self.User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
+			}).where(self.User.email == self.email).execute()
+		else:
+			with open(self.COOKIE_PATH, "w", encoding="utf-8") as f:
+				f.write(json.dumps(self.cookies.get_dict()))
+			return self.COOKIE_PATH
+	
+	def loadCookies(self):
+		if self.mysql:
+			users = self.User.select().where(
+				self.User.email == self.email
+			).execute()
+			if len(users) == 1:
+				try:
+					self.cookies = json.loads(users[0].cookies)
+					return self.cookies
+				except:
+					raise Exception("cookie for this user if haven't been saved")
+			else:
+				raise Exception("user not exist")
+		else:
+			if os.path.exists(self.COOKIE_PATH):
+				with open(self.COOKIE_PATH, "r", encoding="utf-8") as f:
+					try:
+						js = json.loads(f.read())
+						for i in js.keys():
+							self.cookies.set(i, js[i])
+							logging.debug(f"{i} loaded")
+						return self.cookies
+					except:
+						raise Exception("load cookies from files fatal.")
+			else:
+				raise Exception(f"{self.COOKIE_PATH} not exist")
+	
 	def main(self):
 		self.SigninWithEmail()
 		location = self.getAuthURL()
 		if self.grantAuth(location):
 			print("done")
+		self.saveCookies()
+		return self.loadCookies()
+		
 	
 if __name__ == "__main__":
 	email = ""
