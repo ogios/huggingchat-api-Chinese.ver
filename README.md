@@ -1,4 +1,4 @@
-# Open-Assistant-Chinese.ver
+# Huggingchat-Chinese.ver
 
 中文 | [English](README_en.md)
 
@@ -6,12 +6,20 @@
 
 > hugging chat 更新了，需要登录才行，登录后获取唯一用户token并给予长时间有效的hf-chat session
 
+! 在调用`Login(email, passwd).main()`之后，用户名，密码以及cookies会被保存至数据库中，请务必在此之前创建好数据库与表，并在mysqlconf.json中配置
+
+稍微小提一嘴，huggingface的登录竟然是明文诶，没任何加密
+
+如果可以的话给个⭐呗🥺
+
 ## 说明
 
 我这里抓包的是huggingface的网页接口，模型是OpenAssistant/oasst-sft-6-llama-30b
 速度不慢，不过基本都是挂着梯子用的，可以为其打造一个api放服务器上
 
 ## 有道翻译接口
+
+由于使用的语言模型不会返回中文，即使模型有一定能力可以处理中文输入，所以为其加上了翻译来方便阅读
 
 使用的是我自己逆向之后的纯python实现的接口，不需要js
 传送门: [YouDao-Translater](https://github.com/ogios/YouDao-Translater)
