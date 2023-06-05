@@ -4,6 +4,8 @@
 
 > 2023.6.4-22:46: 今天为之后的大更新铺垫了很多，重新构建了整个框架，但是调整说明明天再说，这会太晚了
 
+> 2023.6.6-00:30: 依旧，加的东西蛮多的，明个有时间再讲，还遇到了棘手的问题，不过暂时找到了缓解的方法
+
 > hugging chat 更新了，需要登录才行，登录后获取唯一用户token并给予长时间有效的hf-chat session
 
 ! 在调用`Login(email, passwd).main()`之后，用户名，密码以及cookies会被保存至数据库中，请务必在此之前创建好数据库与表，并在mysqlconf.json中配置
@@ -41,27 +43,7 @@ assistant.init()
 
 ## mysql数据库表结构
 
-共两张表，`user` 与 `conversation`
-
-```sql
-CREATE TABLE `user`  (
-  `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `passwd` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `cookies` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
-  PRIMARY KEY (`email`) USING BTREE,
-  UNIQUE INDEX `unique_id`(`email` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
-
-CREATE TABLE `conversation`  (
-  `username` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `conversation_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `is_user` tinyint(1) NOT NULL,
-  `text_eng` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
-  `text_zh` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
-  `time` datetime NOT NULL ON UPDATE CURRENT_TIMESTAMP,
-  `text_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
-```
+共两张表，`user` 与 `conversation` 会在被导入时自动创建
 
 ## 使用
 

@@ -41,7 +41,9 @@ class Conversation(BaseModel):
 	text_id = peewee.CharField()
 	class Meta:
 		table_name = "conversation"
-	
+
+db.create_tables([User, Conversation])
+
 if __name__ == "__main__":
 	# res = User.insert({
 	# 	User.username: "test",

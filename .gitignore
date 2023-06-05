@@ -1,6 +1,12 @@
 # dirs
-/.idea/
-/old/
-/TestArea/
-/OpenAssistant/__pycache__/
+.idea/
+old/
+TestArea/
+__pycache__/
 usercookies/
+node_modules/
+vue_workplace/
+/Web/
+
+private.pem
+public.pem

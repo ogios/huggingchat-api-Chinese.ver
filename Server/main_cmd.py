@@ -6,19 +6,22 @@ import logging
 import os
 import sys
 import time
+import traceback
 from threading import Thread
 from websocket import WebSocketApp
 
-from OpenAssistant.OpenAssistant import OpenAssistant
-from OpenAssistant.Login import Login
+from HuggingChat.OpenAssistant import OpenAssistant
+from HuggingChat.Login import Login
 from YDTranslate.Translater import Translater
 
-EMAIL = "2134692955@qq.com"
-PASSWD = "1"
+EMAIL = ""
+PASSWD = ""
 
 FLAG = False
 LAST_STATEMENT = None
+WEB_SEARCH = False
 
+logging.getLogger().setLevel(logging.INFO)
 
 def color(string, color: str):
 	dic = {
@@ -64,6 +67,10 @@ def updateMSG(js):
 	else:
 		LAST_STATEMENT = msg
 
+def updateWebSearch(js):
+	print(js)
+	# string = f"Web Search: {js['type']} - {js['message']}"
+	# print(string)
 
 def startWSApp(url):
 	def on_message(wsapp, data):
@@ -71,6 +78,8 @@ def startWSApp(url):
 		type = data["type"]
 		if type == "text":
 			updateMSG(data)
+		if type == "web_search":
+			updateWebSearch(data)
 		elif type == "error":
 			print("error occurred: ", data["msg"])
 	
@@ -89,6 +98,7 @@ def printOutHistories(histories: list[dict]):
 
 def main():
 	global FLAG
+	global WEB_SEARCH
 	
 	parser = argparse.ArgumentParser()
 	parser.add_argument(
@@ -112,10 +122,10 @@ def main():
 	)
 	args = parser.parse_args()
 	u = EMAIL if not args.u else args.u
-	if not args.p:
-		p = getpass.getpass() if not PASSWD else PASSWD
+	if args.p:
+		p = getpass.getpass()
 	else:
-		p = args.p
+		p = getpass.getpass() if not PASSWD else PASSWD
 	mysql = args.mysql
 	force = args.f
 	
@@ -124,12 +134,12 @@ def main():
 	openassistant = OpenAssistant(u, cookies=cookies, tranlater=Translater(), mysql=mysql)
 	openassistant.init()
 	startWSApp(openassistant.wsurl)
+	gc.collect()
 	while 1:
 		try:
 			while FLAG:
 				time.sleep(0.1)
 				continue
-			gc.collect()
 			text = openassistant.getTextFromInput()
 			command = text.strip()
 			if command[0] == "/":
@@ -143,14 +153,20 @@ def main():
 						print("break.")
 						continue
 					FLAG = True
-					title = openassistant.createConversation(text)
+					title = openassistant.createConversation(text, WEB_SEARCH)
 					print(f"Title: {title}")
 				elif command[0] == "ls":
 					print(openassistant.printOutConversations())
 				elif command[0] == "cd":
-					openassistant.switchConversation(int(command[1]))
+					try:
+						openassistant.switchConversation(int(command[1]))
+					except:
+						print("cd fatal")
 				elif command[0] == "old":
 					printOutHistories(openassistant.getHistoriesByID())
+				elif command[0] == "web":
+					WEB_SEARCH = True if not WEB_SEARCH else False
+					print(f"WEB_SEARCH is set to `{WEB_SEARCH}`")
 				else:
 					print("wrong command.")
 					continue
@@ -158,10 +174,13 @@ def main():
 				if not openassistant.current_conversation:
 					print("Please select or create a conversation using '/ls' and '/cd <int>' or '/new'")
 					continue
-				openassistant.chat(text)
+				if WEB_SEARCH:
+					openassistant.chatWeb(text)
+				else:
+					openassistant.chat(text)
 				FLAG = True
 		except Exception as e:
-			print("wrong input")
+			traceback.print_exc()
 
 
 if __name__ == "__main__":

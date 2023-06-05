@@ -2,6 +2,8 @@
 
 > 2023.6.4-22:46: Made a lot of changes today for a big update, but I don't get time to say it now, just gonna wait for tomorrow.
 
+> 2023.6.6-00.60: Still, added a tones of shits, i may talk about them later if i got the time. something about the problems i've found, but i've managed to fixed that.
+
 > There's an update in hugging-chat, which requires the user to sign in (token and hf-chat cookies are required to send requests).
 
 Using hugging-chat web API, the model that is currently available is open-assistant's model called oasst-sft-6-llama-30b

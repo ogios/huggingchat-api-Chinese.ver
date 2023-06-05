@@ -1,3 +1,11 @@
 requests
 peewee
 pycryptodome
+fastapi
+websocket-client
+websocket-server
+python-jose
+numpy
+python-multipart
+uvicorn
+passlib

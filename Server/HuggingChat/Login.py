@@ -24,7 +24,7 @@ class Login:
 		self.cookies = requests.sessions.RequestsCookieJar()
 		self.mysql = mysql
 		if self.mysql:
-			from OpenAssistant.SQL import User, Conversation
+			from .SQL import User, Conversation
 			self.User = User
 			self.Conversation = Conversation
 			user = User.select().where(

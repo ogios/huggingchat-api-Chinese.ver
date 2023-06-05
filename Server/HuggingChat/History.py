@@ -3,7 +3,7 @@ class History_SQL:
 	def __init__(self, email, openAssistant):
 		self.openAssistant = openAssistant
 		self.email = email
-		from OpenAssistant.SQL import User, Conversation
+		from HuggingChat.SQL import User, Conversation
 		self.User = User
 		self.Conversation = Conversation
 	

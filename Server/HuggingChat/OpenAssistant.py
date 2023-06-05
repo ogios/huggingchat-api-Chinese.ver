@@ -1,18 +1,30 @@
 import datetime
 import logging
-import sys
 import time
 import traceback
 import uuid
+
+# import pycurl
 import requests
 import requests.utils
 import requests.sessions
 import json
 import re
 from threading import Thread
-from OpenAssistant.History import History_SQL, History
-from YDTranslate import Translater
+
+# import urllib.parse
+# from six import StringIO
+
+from .History import History_SQL, History
 from .WSServer import WSOut
+from YDTranslate import Translater
+
+
+def dictToString(cookies: dict):
+	cookie = ""
+	for i in cookies:
+		cookie += f"{i}={cookies[i]}; "
+	return cookie
 
 
 class OpenAssistant:
@@ -91,7 +103,7 @@ class OpenAssistant:
 				title = "未获取到title"
 			self.conversations.append({"id": i, "title": title})
 	
-	def requestsGet(self, url: str, params=None) -> requests.Response:
+	def requestsGet(self, url: str, params=None, stream=False) -> requests.Response:
 		'''
 		GET请求接口
 		:param url: url(必填)
@@ -103,6 +115,7 @@ class OpenAssistant:
 			params=params,
 			headers=self.headers,
 			cookies=self.cookies,
+			stream=stream,
 			# proxies=self.proxies
 		)
 		# if (res.status_code == 200) & (self.mysql):
@@ -139,9 +152,10 @@ class OpenAssistant:
 		uid = uuid.uuid4().hex
 		return f"{uid[:8]}-{uid[8:12]}-{uid[12:16]}-{uid[16:20]}-{uid[20:]}"
 	
-	def getData(self, text):
+	def getData(self, text, web_search_id: str = ""):
 		'''
 		对话请求的data模板
+		:param web_search_id: web_search_id
 		:param text: 对话内容
 		:return: data本身
 		'''
@@ -162,8 +176,10 @@ class OpenAssistant:
 			},
 			"options": {
 				"id": self.getUUID(),
+				"response_id": self.getUUID(),
 				"is_retry": False,
-				"use_cache": False
+				"use_cache": False,
+				"web_search_id": web_search_id
 			},
 			"stream": True,
 		}
@@ -192,17 +208,15 @@ class OpenAssistant:
 						if (js["token"]["special"] == True) & (js["generated_text"] != None):
 							reply = js["generated_text"]
 							reply = self.tranlate(reply)
-							self.WSOut.sendMessage(status=True, msg=reply, user="Open-Assistant",
-							                       conversation_id=conversation_id)
+							self.WSOut.sendMessage(status=True, msg=reply, user="Open-Assistant", conversation_id=conversation_id)
 						else:
 							reply = js["token"]["text"]
-							self.WSOut.sendMessage(status=False, msg=reply, user="Open-Assistant",
-							                       conversation_id=conversation_id)
+							self.WSOut.sendMessage(status=False, msg=reply, user="Open-Assistant", conversation_id=conversation_id)
 					except:
 						print(js)
 		return reply
 	
-	def getReply(self, conversation_id, text):
+	def getReply(self, conversation_id, text, web_search_id: str = ""):
 		'''
 		对话入口
 		:param conversation_id: conversation_id
@@ -213,7 +227,7 @@ class OpenAssistant:
 		reply = None
 		
 		for i in range(3):
-			data = self.getData(text)
+			data = self.getData(text, web_search_id)
 			res = self.requestsPost(url, stream=True, data=json.dumps(data, ensure_ascii=False))
 			reply = self.parseData(res, conversation_id=conversation_id)
 			if reply != None:
@@ -230,6 +244,92 @@ class OpenAssistant:
 		'''
 		text = self.translater.translate(text)
 		return text
+	
+	def parseWebData(self, res: requests.Response, conversation_id):
+		if res.status_code != 200:
+			raise Exception("chat fatal")
+		index = -1
+		try:
+			for c in res.iter_content(chunk_size=1024):
+				chunks = c.decode("utf-8").split("\n\n")
+				
+				for chunk in chunks:
+					if chunk:
+						try:
+						# chunk = tempchunk + re.sub("^data:", "", chunk)
+							js = json.loads(chunk)
+						except:
+							logging.debug(f"load fatal: {chunk}")
+						try:
+							if js["messages"][-1]["type"] == "result":
+								self.WSOut.sendWebSearch(js["messages"][-1], conversation_id=conversation_id)
+								return js
+							elif len(js["messages"]) - 1 > index:
+								if index == -1:
+									self.WSOut.sendWebSearch(js["messages"][0], conversation_id=conversation_id)
+									index = 0
+								for message in js["messages"][index+1:]:
+									self.WSOut.sendWebSearch(message, conversation_id=conversation_id)
+									index += 1
+						except:
+							pass
+		except Exception as e:
+			print(e)
+			
+		return
+	
+	# def __pyget(self, url):
+	# 	sio = StringIO()
+	#
+	# 	c = pycurl.Curl()
+	# 	c.setopt(pycurl.URL, url)
+	# 	c.setopt(pycurl.REFERER, url)
+	# 	c.setopt(pycurl.HTTPHEADER, ['Connection: close', 'Cache-Control: max-age=0',
+	# 	                             'Accept: */*',
+	# 	                             'User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36',
+	# 	                             'Accept-Language: zh-CN,zh;q=0.8'])
+	# 	c.setopt(pycurl.HTTP_VERSION, pycurl.CURL_HTTP_VERSION_1_0)
+	# 	c.setopt(pycurl.COOKIE, dictToString(self.cookies.get_dict()))
+	# 	c.setopt(pycurl.HTTPGET, 1)
+	# 	# c.setopt(pycurl.POSTFIELDS, urllib.parse.urlencode(data, True))
+	# 	c.setopt(pycurl.CONNECTTIMEOUT, 300)
+	# 	c.setopt(pycurl.TIMEOUT, 300)
+	# 	c.setopt(pycurl.WRITEFUNCTION, sio.write)
+	#
+	# 	try:
+	# 		c.perform()
+	# 	except Exception as ex:
+	# 		# print 'error', ex
+	# 		pass
+	#
+	# 	c.close()
+	#
+	# 	resp = sio.getvalue()
+	# 	sio.close()
+		
+		# return resp
+	
+	def chatWeb(self, text: str, conversation_id=None) -> dict:
+		conversation_id = self.current_conversation if not conversation_id else conversation_id
+		if not conversation_id:
+			logging.debug("No conversation selected")
+			return None
+		# webUrl = self.url_initConversation + f"/{conversation_id}/web-search?prompt={text}"
+		webUrl = self.url_initConversation + f"/{conversation_id}/web-search"
+		params = {
+			"prompt": text
+		}
+		res = self.requestsGet(webUrl, params, stream=True)
+		js = self.parseWebData(res, conversation_id)
+		# res = self.__pyget(webUrl)
+		# print(res)
+		# js = json.loads(res)
+		# print(res)
+		# print(js)
+		web_search_id = js["messages"][-1]["id"] if js else ""
+		# if js:
+		# 	web_search_id = js["messages"][-1]["id"]
+		self.getReply(conversation_id, text, web_search_id)
 	
 	def chat(self, text: str, conversation_id=None):
 		'''
@@ -265,7 +365,7 @@ class OpenAssistant:
 		js = res.json()
 		return js["title"]
 	
-	def createConversation(self, text):
+	def createConversation(self, text, web: bool=False):
 		'''
 		创建新对话, 需要先进行一次对话获取标题
 		:param text: 对话
@@ -277,7 +377,10 @@ class OpenAssistant:
 			raise Exception("create conversation fatal")
 		js = res.json()
 		conversation_id = js["conversationId"]
-		self.chat(text, conversation_id)
+		if web:
+			self.chatWeb(text, conversation_id)
+		else:
+			self.chat(text, conversation_id)
 		title = self.getTitle(conversation_id)
 		if not title:
 			raise Exception("create conversation fatal")

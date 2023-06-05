@@ -107,3 +107,11 @@ class WSOut:
 			"msg": msg,
 		}
 		self.message_list.append(json.dumps(data, ensure_ascii=False))
+	
+	def sendWebSearch(self, data: list, conversation_id):
+		data = {
+			"type": "web_search",
+			"data": data,
+			"conversation_id": conversation_id
+		}
+		self.message_list.append(json.dumps(data, ensure_ascii=False))
