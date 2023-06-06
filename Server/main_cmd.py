@@ -9,12 +9,13 @@ import time
 import traceback
 from threading import Thread
 from websocket import WebSocketApp
+from typing import List
 
 from HuggingChat.OpenAssistant import OpenAssistant
 from HuggingChat.Login import Login
 from YDTranslate.Translater import Translater
 
-EMAIL = ""
+EMAIL = "2134692955@qq.com"
 PASSWD = ""
 
 FLAG = False
@@ -22,6 +23,7 @@ LAST_STATEMENT = None
 WEB_SEARCH = False
 
 logging.getLogger().setLevel(logging.INFO)
+
 
 def color(string, color: str):
 	dic = {
@@ -35,6 +37,16 @@ def color(string, color: str):
 		'black': '\033[37m'
 	}
 	return dic[color] + string + '\033[0m'
+
+
+def checkCookies(u):
+	login = Login(u, None)
+	try:
+		login.loadCookies()
+		return True
+	except Exception as e:
+		# print(e)
+		return False
 
 
 def login(u, p=None, mysql=False, force=False):
@@ -67,10 +79,13 @@ def updateMSG(js):
 	else:
 		LAST_STATEMENT = msg
 
+
 def updateWebSearch(js):
 	print(js)
-	# string = f"Web Search: {js['type']} - {js['message']}"
-	# print(string)
+
+
+# string = f"Web Search: {js['type']} - {js['message']}"
+# print(string)
 
 def startWSApp(url):
 	def on_message(wsapp, data):
@@ -87,13 +102,36 @@ def startWSApp(url):
 	Thread(target=wsa.run_forever, daemon=True).start()
 
 
-def printOutHistories(histories: list[dict]):
+def printOutHistories(histories: List[dict]):
 	print(f"\n====== Histories of <{histories[0]['conversation_id'] if len(histories) > 1 else ''}> ======\n")
 	string = ""
 	for i in histories:
 		string += f"({color('user', 'green') if i['is_user'] else color('Open-Assistant', 'blue')}): {i['text']}\n"
 	string += "\n"
 	print(string)
+
+
+def changeWeb_search():
+	global WEB_SEARCH
+	WEB_SEARCH = True if not WEB_SEARCH else False
+	print(f"WEB_SEARCH is set to `{WEB_SEARCH}`")
+
+
+def newConversation(openassistant):
+	global FLAG
+	print("Input the first message you want to send (use `/exit` to get back): ")
+	while 1:
+		text = openassistant.getTextFromInput("(new) ")
+		if text == "/exit":
+			print("break.")
+			break
+		if text == "/web":
+			changeWeb_search()
+			continue
+		FLAG = True
+		title = openassistant.createConversation(text, WEB_SEARCH)
+		print(f"Title: {title}")
+		break
 
 
 def main():
@@ -122,15 +160,18 @@ def main():
 	)
 	args = parser.parse_args()
 	u = EMAIL if not args.u else args.u
+	print(f"Login in as <{u}>")
 	if args.p:
 		p = getpass.getpass()
-	else:
+	elif not checkCookies(u):
 		p = getpass.getpass() if not PASSWD else PASSWD
+	else:
+		p = None
 	mysql = args.mysql
 	force = args.f
 	
 	cookies = login(u, p, mysql, force)
-	print(f"you are now sign in as '{u}'")
+	print(f"You are now logged in as <{u}>")
 	openassistant = OpenAssistant(u, cookies=cookies, tranlater=Translater(), mysql=mysql)
 	openassistant.init()
 	startWSApp(openassistant.wsurl)
@@ -147,14 +188,7 @@ def main():
 				if command[0] == "exit":
 					os._exit(0)
 				elif command[0] == "new":
-					print("Input the first message you want to send: ")
-					text = openassistant.getTextFromInput()
-					if text == "/exit":
-						print("break.")
-						continue
-					FLAG = True
-					title = openassistant.createConversation(text, WEB_SEARCH)
-					print(f"Title: {title}")
+					newConversation(openassistant)
 				elif command[0] == "ls":
 					print(openassistant.printOutConversations())
 				elif command[0] == "cd":
@@ -165,8 +199,7 @@ def main():
 				elif command[0] == "old":
 					printOutHistories(openassistant.getHistoriesByID())
 				elif command[0] == "web":
-					WEB_SEARCH = True if not WEB_SEARCH else False
-					print(f"WEB_SEARCH is set to `{WEB_SEARCH}`")
+					changeWeb_search()
 				else:
 					print("wrong command.")
 					continue

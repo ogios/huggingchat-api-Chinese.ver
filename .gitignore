@@ -7,6 +7,7 @@ usercookies/
 node_modules/
 vue_workplace/
 /Web/
+backup/
 
 private.pem
 public.pem

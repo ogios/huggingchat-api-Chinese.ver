@@ -228,6 +228,7 @@ class OpenAssistant:
 		
 		for i in range(3):
 			data = self.getData(text, web_search_id)
+			print(data)
 			res = self.requestsPost(url, stream=True, data=json.dumps(data, ensure_ascii=False))
 			reply = self.parseData(res, conversation_id=conversation_id)
 			if reply != None:
@@ -405,9 +406,9 @@ class OpenAssistant:
 	def getConversations(self):
 		return self.conversations
 	
-	def getTextFromInput(self):
+	def getTextFromInput(self, addition: str = ""):
 		while 1:
-			text = input(f"({self.current_conversation}) > ")
+			text = input(f"{addition}({self.current_conversation}) > ")
 			if not text:
 				continue
 			else:

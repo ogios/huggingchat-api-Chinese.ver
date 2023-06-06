@@ -91,7 +91,7 @@ class Login:
 		if res.status_code == 400:
 			raise Exception("用户名或密码错误")
 
-	def getAuthURL(self) -> str | None:
+	def getAuthURL(self) -> str:
 		url = "https://huggingface.co/chat/login"
 		headers = {
 			"Referer": "https://huggingface.co/chat/login",
