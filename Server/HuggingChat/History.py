@@ -69,7 +69,7 @@ class History_SQL:
 								"conversation_id": i["id"],
 								"is_user": 1 if history[his["from"]] == "user" else 0,
 								"text_eng": history[his["content"]],
-								"text_zh": self.openAssistant.tranlate(history[his["content"]]),
+								"text_zh": self.openAssistant.tranlate(history[his["content"]]) if history[his["from"]] != "user" else history[his["content"]],
 								"time": self.openAssistant.getTime(),
 								"text_id": history[his["id"]],
 							})

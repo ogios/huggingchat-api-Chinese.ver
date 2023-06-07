@@ -43,8 +43,8 @@ def color(string, color: str):
 	return dic[color] + string + '\033[0m'
 
 
-def checkCookies(u):
-	login = Login(u, None)
+def checkCookies(u, mysql=False):
+	login = Login(u, None, mysql)
 	try:
 		login.loadCookies()
 		return True
@@ -189,16 +189,17 @@ def main():
 		help="忽视已保存信息强制登录 - ignore the stored cookies and login"
 	)
 	args = parser.parse_args()
+	mysql = args.mysql
+	force = args.f
 	u = EMAIL if not args.u else args.u
 	print(f"Login in as <{u}>")
 	if args.p:
 		p = getpass.getpass()
-	elif not checkCookies(u):
+	elif not checkCookies(u, mysql):
 		p = getpass.getpass() if not PASSWD else PASSWD
 	else:
 		p = None
-	mysql = args.mysql
-	force = args.f
+
 	
 	cookies = login(u, p, mysql, force)
 	print(f"You are now logged in as <{u}>")

@@ -30,16 +30,16 @@ class Login:
 			user = User.select().where(
 				User.email == self.email
 			).execute()
-			if len(user) == 0:
-				User.insert({
-					User.email: self.email,
-					User.passwd: self.passwd,
-				}).execute()
-			else:
-				if self.passwd:
-					User.update({
-						User.passwd: self.passwd
-					}).where(User.email == self.email).execute()
+			# if len(user) == 0:
+			# 	User.insert({
+			# 		User.email: self.email,
+			# 		User.passwd: self.passwd,
+			# 	}).execute()
+			# else:
+			# 	if self.passwd:
+			# 		User.update({
+			# 			User.passwd: self.passwd
+			# 		}).where(User.email == self.email).execute()
 		else:
 			self.COOKIE_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
 			self.COOKIE_PATH = self.COOKIE_DIR + f"/{self.email}.json"
@@ -151,9 +151,21 @@ class Login:
 			
 	def saveCookies(self):
 		if self.mysql:
-			self.User.update({
-				self.User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
-			}).where(self.User.email == self.email).execute()
+			users = self.User.select().where(
+				self.User.email == self.email
+			).execute()
+			if len(users) != 0:
+				self.User.update({
+					self.User.passwd: self.passwd,
+					self.User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
+				}).where(self.User.email == self.email).execute()
+			else:
+				self.User.insert({
+					self.User.email: self.email,
+					self.User.passwd: self.passwd,
+					self.User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
+				}).execute()
+				
 		else:
 			with open(self.COOKIE_PATH, "w", encoding="utf-8") as f:
 				f.write(json.dumps(self.cookies.get_dict()))
