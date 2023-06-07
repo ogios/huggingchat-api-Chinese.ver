@@ -190,6 +190,7 @@ class OpenAssistant:
 		if res.status_code != 200:
 			raise Exception("chat fatal")
 		reply = None
+		laststatement = ""
 		for c in res.iter_content(chunk_size=1024):
 			chunks = c.decode("utf-8").split("\n\n")
 			tempchunk = ""
@@ -205,10 +206,12 @@ class OpenAssistant:
 					try:
 						if (js["token"]["special"] == True) & (js["generated_text"] != None):
 							reply = js["generated_text"]
+							self.WSOut.sendMessage(status=False, msg=reply, user="Open-Assistant", conversation_id=conversation_id)
 							reply = self.tranlate(reply)
 							self.WSOut.sendMessage(status=True, msg=reply, user="Open-Assistant", conversation_id=conversation_id)
 						else:
 							reply = js["token"]["text"]
+							laststatement = js
 							self.WSOut.sendMessage(status=False, msg=reply, user="Open-Assistant", conversation_id=conversation_id)
 					except:
 						print(js)
@@ -244,39 +247,39 @@ class OpenAssistant:
 		text = self.translater.translate(text)
 		return text
 	
-	def parseWebData(self, res: requests.Response, conversation_id):
-		if res.status_code != 200:
-			raise Exception("chat fatal")
-		index = -1
-		try:
-			for c in res.iter_content(chunk_size=1024):
-				chunks = c.decode("utf-8").split("\n\n")
-				
-				for chunk in chunks:
-					if chunk:
-						try:
-						# chunk = tempchunk + re.sub("^data:", "", chunk)
-							js = json.loads(chunk)
-						except:
-							logging.info(f"load fatal: {chunk}")
-							continue
-						try:
-							if js["messages"][-1]["type"] == "result":
-								self.WSOut.sendWebSearch(js["messages"][-1], conversation_id=conversation_id)
-								return js
-							elif len(js["messages"]) - 1 > index:
-								if index == -1:
-									self.WSOut.sendWebSearch(js["messages"][0], conversation_id=conversation_id)
-									index = 0
-								for message in js["messages"][index+1:]:
-									self.WSOut.sendWebSearch(message, conversation_id=conversation_id)
-									index += 1
-						except:
-							pass
-		except Exception as e:
-			print(e)
-		return
-	
+	# def parseWebData(self, res: requests.Response, conversation_id):
+	# 	if res.status_code != 200:
+	# 		raise Exception("chat fatal")
+	# 	index = -1
+	# 	try:
+	# 		for c in res.iter_content(chunk_size=1024):
+	# 			chunks = c.decode("utf-8").split("\n\n")
+	#
+	# 			for chunk in chunks:
+	# 				if chunk:
+	# 					try:
+	# 					# chunk = tempchunk + re.sub("^data:", "", chunk)
+	# 						js = json.loads(chunk)
+	# 					except:
+	# 						logging.info(f"load fatal: {chunk}")
+	# 						continue
+	# 					try:
+	# 						if js["messages"][-1]["type"] == "result":
+	# 							self.WSOut.sendWebSearch(js["messages"][-1], conversation_id=conversation_id)
+	# 							return js
+	# 						elif len(js["messages"]) - 1 > index:
+	# 							if index == -1:
+	# 								self.WSOut.sendWebSearch(js["messages"][0], conversation_id=conversation_id)
+	# 								index = 0
+	# 							for message in js["messages"][index+1:]:
+	# 								self.WSOut.sendWebSearch(message, conversation_id=conversation_id)
+	# 								index += 1
+	# 					except:
+	# 						pass
+	# 	except Exception as e:
+	# 		print(e)
+	# 	return
+	#
 	def chatWeb(self, text: str, conversation_id=None) -> dict:
 		conversation_id = self.current_conversation if not conversation_id else conversation_id
 		if not conversation_id:

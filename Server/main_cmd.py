@@ -4,7 +4,6 @@ import getpass
 import json
 import logging
 import os
-import sys
 import time
 import traceback
 from threading import Thread
@@ -84,7 +83,6 @@ def updateMSG(js):
 			CONSOLE.print(markdown)
 		except:
 			print(string)
-		print()
 		if user == "Open-Assistant":
 			FLAG = False
 	else:
@@ -228,6 +226,12 @@ def main():
 					printOutHistories(openassistant.getHistoriesByID())
 				elif command[0] == "web":
 					changeWeb_search()
+				elif command[0] == "eng":
+					if LAST_STATEMENT:
+						openassistant.WSOut.sendMessage(status=True, user="Open-Assistant", msg=LAST_STATEMENT, conversation_id=openassistant.current_conversation)
+						FLAG = True
+					else:
+						print("No reply yet.\n暂无回复")
 				else:
 					print("wrong command.\n错误命令")
 					continue

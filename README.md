@@ -100,6 +100,7 @@ python main_cmd.py -u <邮箱> -p
 | old        | 查看历史记录            |
 | new        | 进入新建对话状态          |
 | rm <index> | 删除对话              |
+| eng        | 输出上一句回复的原文(英文)    |
 
 示例:
 ```
@@ -175,6 +176,25 @@ python main_cmd.py -u <邮箱> -p
 对于历史信息来说，没开启mysql的话会实时获取历史记录，但不会翻译。  
 而如果开启了mysql，则会每过15秒同步并翻译历史记录到数据库，需要时直接从数据库中提取翻译后的内容。
 
+
+</details>
+
+
+<details>
+
+<summary>
+
+## 报错
+
+</summary>
+
+### Ubuntu安装pycurl报错
+```shell
+apt-get install libcurl4-gnutls-dev, libgnutls28-dev
+```
+如果可以的话尽量更新一下 `python3-dev` 和 `libpython3-dev` 等  
+
+CentOS等系统报错网上搜一下吧，我没试过www
 
 </details>
 

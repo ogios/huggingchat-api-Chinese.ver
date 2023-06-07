@@ -86,15 +86,16 @@ And also, create a database named `open-assistant` or change the database in the
 ### Commands
 Format: `/`+`command`
 
-| Command    |                                 |
-|------------|---------------------------------|
-| exit       | exit the program                |
-| ls         | list all conversations          |
-| cd <index> | cd into the chosen conversation |
-| web        | activate `Search web` or not    |
-| old        | check conversation history      |
-| new        | get into new conversation       |
-| rm <index> | remove the chosen conversation  |
+| Command    |                                      |
+|------------|--------------------------------------|
+| exit       | exit the program                     |
+| ls         | list all conversations               |
+| cd <index> | cd into the chosen conversation      |
+| web        | activate `Search web` or not         |
+| old        | check conversation history           |
+| new        | get into new conversation            |
+| rm <index> | remove the chosen conversation       |
+| eng        | print out last reply's original text |
 
 Example:
 ```
@@ -173,3 +174,20 @@ On the other hand, if you do, then it will synchronize and translate histories e
 
 </details>
 
+<details>
+
+<summary>
+
+## Errors
+
+</summary>
+
+### Installation of pycurl in Ubuntu
+```shell
+apt-get install libcurl4-gnutls-dev, libgnutls28-dev
+```
+update and upgrade `python3-dev` and `libpython3-dev` etc would be alright.
+
+For CentOS or other, not yet tested, you can search for it online.
+
+</details>
