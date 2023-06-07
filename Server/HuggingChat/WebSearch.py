@@ -28,7 +28,9 @@ class WebSearch:
 			self.data = js
 			messages = js["messages"]
 		except Exception as e:
-			logging.error(str(e))
+			logging.error("One error occurred when parsing WebSearch data, it's fine since it sometimes returns responses in a wrong json format")
+			# logging.error("WebSearch error:" + data)
+			# traceback.print_exc()
 			return
 		if messages[-1]["type"] == "result":
 			self.WSOut.sendWebSearch(messages[-1], conversation_id=self.conversation_id)

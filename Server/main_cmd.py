@@ -89,8 +89,21 @@ def updateMSG(js):
 		LAST_STATEMENT = msg
 
 
-def updateWebSearch(js):
-	print(js)
+def updateWebSearch(js: dict):
+	# print(js)
+	if js["type"] == "web_search" and js.__contains__("data"):
+		data: dict = js["data"]
+		if data["type"] == "update" and data.__contains__("message"):
+			string = f"* {data['message']}{' - '+str(data['args']) if data.__contains__('args') else ''}"
+			print(string)
+		elif data["type"] == "result":
+			print(f"* result - {data['id']}")
+		else:
+			logging.error(f"Wrong step: {js}")
+	else:
+		logging.error(f"Wrong step: {js}")
+		
+		
 
 
 # string = f"Web Search: {js['type']} - {js['message']}"
