@@ -2,6 +2,7 @@ import json
 import logging
 import traceback
 import pycurl
+import urllib3.util
 
 
 def dictToString(cookies: dict):
@@ -14,7 +15,7 @@ def dictToString(cookies: dict):
 class WebSearch:
 	def __init__(self, url: str, cookies: dict, WSOut, conversation_id: str):
 		self.data = None
-		self.url = url
+		self.url = urllib3.util.parse_url(url).url
 		self.cookies = cookies
 		self.conversation_id = conversation_id
 		self.WSOut = WSOut
