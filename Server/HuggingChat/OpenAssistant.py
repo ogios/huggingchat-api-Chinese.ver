@@ -371,6 +371,8 @@ class OpenAssistant:
 			logging.info("Delete conversation fatal")
 			return
 		del self.conversations[index]
+		if self.current_conversation == conversation_id:
+			self.current_conversation = None
 		return 1
 	
 	def getHistoriesByID(self, conversation_id=None):
