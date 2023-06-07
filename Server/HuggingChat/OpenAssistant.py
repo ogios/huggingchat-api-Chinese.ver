@@ -12,9 +12,7 @@ import json
 import re
 from threading import Thread
 
-# import urllib.parse
-# from six import StringIO
-
+from .WebSearch import WebSearch
 from .History import History_SQL, History
 from .WSServer import WSOut
 from YDTranslate import Translater
@@ -228,7 +226,7 @@ class OpenAssistant:
 		
 		for i in range(3):
 			data = self.getData(text, web_search_id)
-			print(data)
+			# print(data)
 			res = self.requestsPost(url, stream=True, data=json.dumps(data, ensure_ascii=False))
 			reply = self.parseData(res, conversation_id=conversation_id)
 			if reply != None:
@@ -260,7 +258,8 @@ class OpenAssistant:
 						# chunk = tempchunk + re.sub("^data:", "", chunk)
 							js = json.loads(chunk)
 						except:
-							logging.debug(f"load fatal: {chunk}")
+							logging.info(f"load fatal: {chunk}")
+							continue
 						try:
 							if js["messages"][-1]["type"] == "result":
 								self.WSOut.sendWebSearch(js["messages"][-1], conversation_id=conversation_id)
@@ -276,60 +275,24 @@ class OpenAssistant:
 							pass
 		except Exception as e:
 			print(e)
-			
 		return
-	
-	# def __pyget(self, url):
-	# 	sio = StringIO()
-	#
-	# 	c = pycurl.Curl()
-	# 	c.setopt(pycurl.URL, url)
-	# 	c.setopt(pycurl.REFERER, url)
-	# 	c.setopt(pycurl.HTTPHEADER, ['Connection: close', 'Cache-Control: max-age=0',
-	# 	                             'Accept: */*',
-	# 	                             'User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36',
-	# 	                             'Accept-Language: zh-CN,zh;q=0.8'])
-	# 	c.setopt(pycurl.HTTP_VERSION, pycurl.CURL_HTTP_VERSION_1_0)
-	# 	c.setopt(pycurl.COOKIE, dictToString(self.cookies.get_dict()))
-	# 	c.setopt(pycurl.HTTPGET, 1)
-	# 	# c.setopt(pycurl.POSTFIELDS, urllib.parse.urlencode(data, True))
-	# 	c.setopt(pycurl.CONNECTTIMEOUT, 300)
-	# 	c.setopt(pycurl.TIMEOUT, 300)
-	# 	c.setopt(pycurl.WRITEFUNCTION, sio.write)
-	#
-	# 	try:
-	# 		c.perform()
-	# 	except Exception as ex:
-	# 		# print 'error', ex
-	# 		pass
-	#
-	# 	c.close()
-	#
-	# 	resp = sio.getvalue()
-	# 	sio.close()
-		
-		# return resp
 	
 	def chatWeb(self, text: str, conversation_id=None) -> dict:
 		conversation_id = self.current_conversation if not conversation_id else conversation_id
 		if not conversation_id:
-			logging.debug("No conversation selected")
+			logging.info("No conversation selected")
 			return None
 		# webUrl = self.url_initConversation + f"/{conversation_id}/web-search?prompt={text}"
+		# print("")
 		webUrl = self.url_initConversation + f"/{conversation_id}/web-search"
-		params = {
-			"prompt": text
-		}
-		res = self.requestsGet(webUrl, params, stream=True)
-		js = self.parseWebData(res, conversation_id)
-		# res = self.__pyget(webUrl)
-		# print(res)
-		# js = json.loads(res)
-		# print(res)
-		# print(js)
+		# params = {
+		# 	"prompt": text
+		# }
+		# res = self.requestsGet(webUrl, params, stream=True)
+		# js = self.parseWebData(res, conversation_id)
+		js = WebSearch(webUrl + f"?prompt={text}", self.cookies.get_dict(), self.WSOut, conversation_id).getWebSearch()
 		web_search_id = js["messages"][-1]["id"] if js else ""
-		# if js:
-		# 	web_search_id = js["messages"][-1]["id"]
+		self.WSOut.sendMessage(status=True, msg=text, user="user", conversation_id=conversation_id)
 		self.getReply(conversation_id, text, web_search_id)
 	
 	def chat(self, text: str, conversation_id=None):
@@ -341,7 +304,7 @@ class OpenAssistant:
 		'''
 		conversation_id = self.current_conversation if not conversation_id else conversation_id
 		if not conversation_id:
-			logging.debug("No conversation selected")
+			logging.info("No conversation selected")
 			return None
 		self.WSOut.sendMessage(status=True, msg=text, user="user", conversation_id=conversation_id)
 		self.getReply(conversation_id, text)
@@ -391,11 +354,26 @@ class OpenAssistant:
 		self.current_conversation = conversation_id
 		return title
 	
+	def removeConversation(self, index: int):
+		if 0 <= index <= len(self.conversations) - 1:
+			logging.info("Index out of bounds\nindex超出范围")
+			return
+		conversation_id = self.conversations[index]["id"]
+		logging.info(f"Deleting conversation <{conversation_id}>")
+		url = self.url_initConversation + f"/{conversation_id}"
+		res = requests.delete(url, headers=self.headers, cookies=self.cookies)
+		if res.status_code != 200:
+			logging.info(f"{res.text}")
+			logging.info("Delete conversation fatal")
+			return
+		del self.conversations[index]
+		return 1
+	
 	def getHistoriesByID(self, conversation_id=None):
 		conversation_id = self.current_conversation if not conversation_id else conversation_id
 		if not conversation_id:
 			return []
-		logging.debug(f"Getting histories for {self.email}:{conversation_id}...")
+		logging.info(f"Getting histories for {self.email}:{conversation_id}...")
 		histories = self.History.getHistoriesByID(conversation_id)
 		if histories == None:
 			raise Exception("Something went wrong")
@@ -418,10 +396,10 @@ class OpenAssistant:
 		self.current_conversation = self.conversations[option]["id"]
 	
 	def printOutConversations(self):
-		string = "* Conversations that have been established: \n\n"
+		string = "* Conversations that have been established:\n* 已创建的对话: \n\n"
 		for i in range(len(self.conversations)):
 			string += f"	{i}. {self.conversations[i]['title']}\n"
-		string += "\n"
+		# string += "\n"
 		return string
 
 

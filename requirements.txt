@@ -9,3 +9,6 @@ numpy
 python-multipart
 uvicorn
 passlib
+pycurl
+typing
+rich

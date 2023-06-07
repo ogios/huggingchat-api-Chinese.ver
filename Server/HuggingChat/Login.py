@@ -44,9 +44,9 @@ class Login:
 			self.COOKIE_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
 			self.COOKIE_PATH = self.COOKIE_DIR + f"/{self.email}.json"
 			if not os.path.exists(self.COOKIE_DIR):
-				logging.debug("Cookie directory not found, creating...")
+				logging.info("Cookie directory not found, creating...")
 				os.makedirs(self.COOKIE_DIR)
-			logging.debug(f"Cookie store path: {self.COOKIE_PATH}")
+			logging.info(f"Cookie store path: {self.COOKIE_PATH}")
 		
 	def requestsGet(self, url:str, params=None, allow_redirects=True) -> requests.Response:
 		res = requests.get(
@@ -179,7 +179,7 @@ class Login:
 						js = json.loads(f.read())
 						for i in js.keys():
 							self.cookies.set(i, js[i])
-							logging.debug(f"{i} loaded")
+							logging.info(f"{i} loaded")
 						return self.cookies
 					except:
 						raise Exception("load cookies from files fatal.")

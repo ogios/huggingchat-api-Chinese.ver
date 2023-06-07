@@ -2,201 +2,179 @@
 
 中文 | [English](README_en.md)
 
-> 2023.6.4-22:46: 今天为之后的大更新铺垫了很多，重新构建了整个框架，但是调整说明明天再说，这会太晚了
+> 暂时仅提供命令行终端聊天版本，fastapi后端版本还未完成，不过接口都是一样的
 
-> 2023.6.6-00:30: 依旧，加的东西蛮多的，明个有时间再讲，还遇到了棘手的问题，不过暂时找到了缓解的方法
+[//]: # ()
+[//]: # (> 2023.6.4-22:46: 今天为之后的大更新铺垫了很多，重新构建了整个框架，但是调整说明明天再说，这会太晚了)
 
-> hugging chat 更新了，需要登录才行，登录后获取唯一用户token并给予长时间有效的hf-chat session
-
-! 在调用`Login(email, passwd).main()`之后，用户名，密码以及cookies会被保存至数据库中，请务必在此之前创建好数据库与表，并在mysqlconf.json中配置
+[//]: # ()
+[//]: # (> 2023.6.6-00:30: 依旧，加的东西蛮多的，明个有时间再讲，还遇到了棘手的问题，不过暂时找到了缓解的方法)
 
 稍微小提一嘴，huggingface的登录竟然是明文诶，没任何加密
 
-如果可以的话给个⭐呗🥺
+如果可以用的话给个⭐呗🥺
 
 ## 说明
 
-我这里抓包的是huggingface的网页接口，模型是OpenAssistant/oasst-sft-6-llama-30b
-速度不慢，不过基本都是挂着梯子用的，可以为其打造一个api放服务器上
+抓包的是huggingface的网页接口  
+模型是 `OpenAssistant/oasst-sft-6-llama-30b`
+
+由于时间关系，现在只做了命令行版本，fastapi配合网页的版本的暂时没时间写，搁置了  
+不过用的接口都是相同的，感兴趣的话可以配合这个自己做。
 
 ## 有道翻译接口
 
-由于使用的语言模型不会返回中文，即使模型有一定能力可以处理中文输入，所以为其加上了翻译来方便阅读
+由于使用的语言模型不会返回中文，即便模型有一定能力可以处理中文输入。所以为其加上了翻译来方便阅读
 
 使用的是我自己逆向之后的纯python实现的接口，不需要js
 传送门: [YouDao-Translater](https://github.com/ogios/YouDao-Translater)
 
-## Open-Assistant创建
+<details>
 
-使用下面的代码创建与初始化接口，连接mysql并同步对话内容：
 
-```python
-from OpenAssistant import OpenAssistant
-from YDTranslate import Translater
+<summary>
 
-tranlater = Translater.Translater(hot=True) #使用默认参数的有道翻译，不重新请求key
-assistant = OpenAssistant.OpenAssistant(email, tranlater) #email为huggingchat的登录邮箱
-assistant.init()
-```
+## 登录到huggingface
 
-这样就会自动创建并连接mysql，同步cookies与对话内容
-
-## mysql数据库表结构
-
-共两张表，`user` 与 `conversation` 会在被导入时自动创建
-
-## 使用
-
-> 仅给出部分方法的使用
-
-### 提取旧的对话内容
-
-在调用 `init()` 初始化后会创建一个线程 `synchronizeChatHistory()` ，每15秒同步一次对话内容并保存至mysql数据库中
-使用getHistories()从mysql中获取旧的记录
-
-需要注意的是，直接发送对话后并不会将对话内容保存至数据库中，需要等待同步历史记录，这是因为直接对话时服务器并不会返回这句话的uuid，同步历史记录时才会给出
+</summary>
 
 ```python
-	def synchronizeChatHistory(self):
-		'''
-		根据huggingface服务器保存的对话记录保存至数据库中
-		:return: 无
-		'''
-		...
+import requests.sessions
+from HuggingChat.Login import Login
+
+email = "你账号的邮箱"
+passwd = "密码"
+sign = Login(email=email, passwd=passwd, mysql=False)
+
+# 登录并保存cookies
+cookies: requests.sessions.RequestsCookieJar = sign.main()
+
+# 从已保存的cookies中加载
+cookies: requests.sessions.RequestsCookieJar  = sign.loadCookies()
 ```
 
-### 创建新对话
 
-使用 `createConversation()` 创建新的对话
+</details>
 
-```python
-	def createConversation(self, text):
-		'''
-		创建新对话, 需要先进行一次对话获取标题
-		:param text: 对话
-		:return: ((英文文本, 中文文本), (对话id, 对话标题))
-		'''
-		data = {"model": self.model}
-		res = self.requestsPost(self.url_initConversation, data=json.dumps(data))
-		# res = requests.post(self.url_initConversation, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
-		if res.status_code != 200:
-			raise Exception("create conversation fatal")
-		# self.refreshCookies(res.cookies)
-		js = res.json()
-		conversation_id = js["conversationId"]
-		reply = self.chat(conversation_id, text)
-		title = self.getTitle(conversation_id)
-		if not reply[0] and not title:
-			raise Exception("create conversation fatal")
-		conversation = {"id": conversation_id, "title": title}
-		self.conversations.append(conversation)
-		# self.saveChat(conversation_id["id"], (None, text), True, )
-		return (reply, conversation)
+
+<details>
+
+<summary>
+
+## 基本使用方法
+
+</summary>
+
+### 创建连接
+```shell
+python main_cmd.py -u <邮箱> -p
+```
+| 参数      |                 |
+|---------|-----------------|
+| -u      | 账号的邮箱(可选)       |
+| -p      | 是否输入密码(可选)      |
+| --mysql | 是否连接mysql(可选)   |
+| -f      | 忽略已保存信息强制登录(可选) |
+
+连接mysql前需要在 `mysqlconf.json` 文件中修改配置并提前创建名为 `open-assistant` 的数据库
+或是修改 `database` 你用的别的数据库名
+```json
+{
+  "sqluser": "",
+  "sqlpass": "",
+  "database": "open-assistant",
+  "host": "127.0.0.1",
+  "port": 3306
+}
 ```
 
-正常的chat()与createConversation()返回的内容格式分别如下:
+### 命令行
+处于命令行模型时输入 `/`+`命令` 执行命令，除此之外都算作发送对话的文本
 
-```python
-# chat()
-(英文回复, 中文回复)
+| 命令         |                   |
+|------------|-------------------|
+| exit       | 退出程序              |
+| ls         | 查看所有对话            |
+| cd <index> | 进入某个对话            |
+| web        | 切换对话状态(普通/接入网络搜索) |
+| old        | 查看历史记录            |
+| new        | 进入新建对话状态          |
+| rm <index> | 删除对话              |
 
-# createConverstaion()
-(
-  (英文回复, 中文回复),
-  {"id": 对话id, "title": 对话的标题}
-)
+示例:
+```
+(None) > /ls
+#* Conversations that have been established:
+#
+#        0. Assistant: "It's February 24th."
+#        1. Today is Wednesday, July 12th, 2034
+#        2. "What is today's date?"
+#        3. "April 2nd."
+#
+
+(None) > /cd 0
+(647e09ccabd9de3d82d6fba0) > hi
+#(user): hi
+#(Open-Assistant): ...
+(647e09ccabd9de3d82d6fba0) > /web
+#WEB_SEARCH is set to `True`
+(647e09ccabd9de3d82d6fba0) > hi
+#{'type': 'web_search', 'data': {'type': 'update', 'message': 'Injecting summary', 'args': ['"This is a search result page from iStock, a website that offers stock photography, illu
+#strations, and videos. It appears to be related to Memorial Day trending searches, but it\'s not clear how or why that relates to German shepherd puppies. There are some links unde
+#r the header \\"Explore\\" which offer curated collections such as signature collection and essentials collection; however these do not seem to have any specific relation with germ
+#an shepherd puppies either.\\nThe queries mentioned on this page include Fireworks, Pride Data Timelapse Beach, Aerial views of nature etc . This suggest the user searched at wrong
+# timeframe, there might have been other pages available at different point of time containing more accurate results."']}, 'conversation_id': '647f33d14f9cfed1cb9c9b01'}
+#{'type': 'web_search', 'data': {'type': 'result', 'id': '647f33e74f9cfed1cb9c9b03'}, 'conversation_id': '647f33d14f9cfed1cb9c9b01'}
+#(user): hi
+#
+#(Open-Assistant): 你好!今天我能为您做些什么?你需要我帮你找到某个主题的信息吗?或者你有问题要问我吗?如果有什么需要我帮忙的，请尽管开口。
 ```
 
-### 持久化
+在输入 `/new` 后进入新建对话模式，仅支持 `/web` 开关网络搜索和 `/exit` 退出新建对话模式: 
 
-对于GET与POST请求分别套了两个方法，并配合refreshCookies()进行cookies的持久化
-
-```python
-    def requestsGet(self, url: str, params=None) -> requests.Response:
-	'''
-    GET请求接口
-    :param url: url(必填)
-    :param params: params(非必须)
-    :return: Response
-    '''
-	res = requests.get(url, params=params, headers=self.headers, cookies=self.cookies, proxies=self.proxies)
-	if res.status_code == 200:
-		self.refreshCookies(res.cookies)
-	return res
-
-
-def requestsPost(self, url: str, params=None, data=None, stream=False) -> requests.Response:
-	'''
-    POST请求接口
-    :param url: url(必填)
-    :param params:
-    :param data:
-    :param stream: 流传输(默认不使用)
-    :return:
-    '''
-	res = requests.post(url, stream=stream, params=params, data=data, headers=self.headers, cookies=self.cookies,
-	                    proxies=self.proxies)
-	if res.status_code == 200:
-		self.refreshCookies(res.cookies)
-	return res
-
-
-def refreshCookies(self, cookies: requests.sessions.RequestsCookieJar):
-	'''
-    用于请求完后刷新和维持cookie
-    :param cookies: 请求后的cookie，从 Response.cookies 中提取
-    :return: 无
-    '''
-	dic = cookies.get_dict()
-	for i in dic:
-		self.cookies.set(i, dic[i])
-	User.update({
-		User.cookies: json.dumps(self.cookies.get_dict(), ensure_ascii=True)
-	}).where(User.email == self.email).execute()
+新建对话示例:
+```
+(None) > /new
+#Input the first message you want to send (use `/exit` to get back): 
+#输入创建对话的第一个消息 (使用`/exit`退出新建对话): 
+(new) (None) > hi
+(user): hi
+(Open-Assistant): ...
+(647e09ccabd9de3d82d6fba0) > 
 ```
 
-### 对话参数
 
-对话参数使用getData()获取与设置
+</details>
 
-```python
-	def getData(self, text):
-		'''
-		对话请求的data模板
-		:param text: 对话内容
-		:return: data本身
-		'''
-		data = {
-			"inputs": text.encode("utf-8").decode("latin1"),
-			"parameters": {
-				"temperature": 0.9,
-				"top_p": 0.95,
-				"repetition_penalty": 1.2,
-				"top_k": 50,
-				"truncate": 1024,
-				"watermark": False,
-				"max_new_tokens": 1024,
-				"stop": [
-					"</s>"
-				],
-				"return_full_text": False
-			},
-			"options": {
-				"id": self.getUUID(),
-				"is_retry": False,
-				"use_cache": False
-			},
-			"stream": True,
-		}
-		return data
-```
 
-这里的参数都是huggingface里无法直接设置的，但是在这里可以手动调整参数，或者去open-assistant官网尝试更多的模型与参数
+<details>
 
-### 代理
+<summary>
 
-默认是有代理的，clash的7890端口
+## 其他
 
-### mysql配置
+</summary>
 
-在文件 `mysqlconf.json` 里设置用户，密码，数据库名，主机地址，端口这些信息
+
+### 关于网络搜索功能
+#### 使用情况
+我从前三四天发现聊天窗口多了一个开关网络搜索的按钮之后就打算把整个框架重构一下，然后加上网络搜索接口  
+但是，今天是6月7号，这才几天，已经被用的经常出现超载了，一开始其实比现在是快蛮多的，虽然还是会等一小段时间。  
+但是现在，经常超载，好不容易能用还老卡。
+
+#### 制作过程
+我并没有详细对http请求进行过一个详细的学习和了解，只会用一些平常的，这导致了下面极其的耗费时间。
+
+这次的网络搜索接口实在把我整的有些不会了，一开始使用的是 `requests.get(stream=True)` 但经常会报错chunk的问题，我仔细看了一下发现他和对话的消息流还有点不一样。  
+对话使用的是 `EventStream`，但这个并不是，而是搜索模块每经历一个步骤返回一次，期间依旧保持连接。因为报错的原因我还在网上搜来搜去，搜到都是些什么http1.0而非http1.1的内容，requests在处理这块的问题有些bug之类的。  
+不过最后还是解决了。(大概吧, 至少暂时还没报错) 
+
+### 关于英译中
+每次对话返回的内容会被翻译为中文。
+
+对于历史信息来说，没开启mysql的话会实时获取历史记录，但不会翻译。  
+而如果开启了mysql，则会每过15秒同步并翻译历史记录到数据库，需要时直接从数据库中提取翻译后的内容。
+
+
+</details>
+
