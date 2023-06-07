@@ -355,7 +355,8 @@ class OpenAssistant:
 		return title
 	
 	def removeConversation(self, index: int):
-		if 0 <= index <= len(self.conversations) - 1:
+		# print(index)
+		if not 0 <= index <= len(self.conversations) - 1:
 			logging.info("Index out of bounds\nindex超出范围")
 			return
 		conversation_id = self.conversations[index]["id"]
