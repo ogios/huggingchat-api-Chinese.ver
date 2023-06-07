@@ -188,9 +188,8 @@ class OpenAssistant:
 	
 	def parseData(self, res: requests.Response, conversation_id):
 		if res.status_code != 200:
-			raise Exception("chat fatal")
+			raise Exception(f"chat fatal: {res.status_code} - {res.text}")
 		reply = None
-		laststatement = ""
 		for c in res.iter_content(chunk_size=1024):
 			chunks = c.decode("utf-8").split("\n\n")
 			tempchunk = ""
@@ -211,7 +210,6 @@ class OpenAssistant:
 							self.WSOut.sendMessage(status=True, msg=reply, user="Open-Assistant", conversation_id=conversation_id)
 						else:
 							reply = js["token"]["text"]
-							laststatement = js
 							self.WSOut.sendMessage(status=False, msg=reply, user="Open-Assistant", conversation_id=conversation_id)
 					except:
 						print(js)
