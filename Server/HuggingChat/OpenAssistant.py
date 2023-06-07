@@ -158,7 +158,7 @@ class OpenAssistant:
 		:return: data本身
 		'''
 		data = {
-			"inputs": text.encode("utf-8").decode("latin1"),
+			"inputs": text,
 			"parameters": {
 				"temperature": 0.9,
 				"top_p": 0.95,
@@ -228,7 +228,7 @@ class OpenAssistant:
 		for i in range(3):
 			data = self.getData(text, web_search_id)
 			# print(data)
-			res = self.requestsPost(url, stream=True, data=json.dumps(data, ensure_ascii=False))
+			res = self.requestsPost(url, stream=True, data=json.dumps(data))
 			reply = self.parseData(res, conversation_id=conversation_id)
 			if reply != None:
 				break
