@@ -15,6 +15,7 @@ Leave a ⭐ if you like it🥺
 
 Hugging-chat's web api. The current model is `OpenAssistant/oasst-sft-6-llama-30b`.
 
+This video shows how to actually use it: https://www.bilibili.com/video/BV12h4y1G7Zc
 
 ## Translator
 
