@@ -216,7 +216,7 @@ def main():
 			command = text.strip()
 			if command[0] == "/":
 				command = command[1:].split(" ")
-				if command[0] == "exit" or "q":
+				if command[0] == "exit" or command[0] == "q":
 					os._exit(0)
 				elif command[0] == "new":
 					newConversation(openassistant)
