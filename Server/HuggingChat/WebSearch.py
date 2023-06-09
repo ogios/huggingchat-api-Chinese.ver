@@ -28,21 +28,21 @@ class WebSearch:
 			js = json.loads(data)
 			self.data = js
 			messages = js["messages"]
+			if messages[-1]["type"] == "result":
+				self.WSOut.sendWebSearch(messages[-1], conversation_id=self.conversation_id)
+				return 456
+			elif len(messages) - 1 > self.index:
+				if self.index == -1:
+					self.WSOut.sendWebSearch(messages[0], conversation_id=self.conversation_id)
+					self.index = 0
+				for message in messages[self.index + 1:]:
+					self.WSOut.sendWebSearch(message, conversation_id=self.conversation_id)
+					self.index += 1
 		except Exception as e:
-			logging.error("One error occurred when parsing WebSearch data, it's fine since it sometimes returns responses in a wrong json format")
-			# logging.error("WebSearch error:" + data)
-			# traceback.print_exc()
-			return
-		if messages[-1]["type"] == "result":
-			self.WSOut.sendWebSearch(messages[-1], conversation_id=self.conversation_id)
-			return 456
-		elif len(messages) - 1 > self.index:
-			if self.index == -1:
-				self.WSOut.sendWebSearch(messages[0], conversation_id=self.conversation_id)
-				self.index = 0
-			for message in messages[self.index + 1:]:
-				self.WSOut.sendWebSearch(message, conversation_id=self.conversation_id)
-				self.index += 1
+			logging.error(
+				"One error occurred when parsing WebSearch data, it's fine since it sometimes returns responses in a wrong json format")
+		# logging.error("WebSearch error:" + data)
+		# traceback.print_exc()
 	
 	def getWebSearch(self):
 		
@@ -63,7 +63,7 @@ class WebSearch:
 		except Exception as e:
 			if e.args[0] != 23:
 				traceback.print_exc()
-		self.c.close()
+		# self.c.close()
 		return self.data
 
 

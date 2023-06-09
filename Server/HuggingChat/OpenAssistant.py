@@ -216,7 +216,6 @@ class OpenAssistant:
 		
 		for i in range(3):
 			data = self.getData(text, web_search_id)
-			# print(data)
 			res = self.requestsPost(url, stream=True, data=json.dumps(data))
 			reply = self.parseData(res, conversation_id=conversation_id)
 			if reply != None:
@@ -307,6 +306,7 @@ class OpenAssistant:
 			).getWebSearch()
 			web_search_id = js["messages"][-1]["id"] if js else ""
 		self.WSOut.sendMessage(status=True, msg=text, user="user", conversation_id=conversation_id)
+		print("web_search_id: ", web_search_id)
 		self.getReply(conversation_id, text, web_search_id)
 	
 	# eng = self.getReply(conversation, text)

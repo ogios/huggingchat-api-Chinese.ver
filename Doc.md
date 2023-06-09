@@ -1,4 +1,12 @@
+<details>
+
+<summary>
+
 # 消息格式
+
+</summary>
+
+
 为了可能被需要的流式传播，我是用的和之前 [Claude-in-slack-api]() 用的是相同的方法:  
 通过 `WebSocket` 传输内容，可以说，所有消息 (包括网络搜索的，每个步骤) 每一个字符都会经过Websocket传输，就如 `EventStream` 一样
 
@@ -78,7 +86,16 @@ openassistant.init()
 startWSApp(openassistant.wsurl)
 ```
 
+</details>
+
+
+<details>
+
+<summary>
+
 # API
+
+</summary>
 
 ## 登录
 ```python
@@ -161,3 +178,4 @@ cookies: requests.sessions.RequestsCookieJar  = sign.loadCookies()
 #### removeConversation(index: int)
 删除对话
 
+</details>

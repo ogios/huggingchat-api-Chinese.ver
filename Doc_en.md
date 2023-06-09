@@ -1,4 +1,11 @@
+<details>
+
+<summary>
+
 # Message format
+
+</summary>
+
 For stream messages that may be needed, I am using the same method as before [Claude-in-slack-api]() :
 Content is transmitted through the `WebSocket`, every messages(on or two characters), including every step of web search will be transmitted through the Websocket
 ## Connect to Websocket
@@ -75,8 +82,15 @@ openassistant = OpenAssistant(u, cookies=cookies, tranlater=Translater(), mysql=
 openassistant.init()
 startWSApp(openassistant.wsurl)
 ```
+</details>
+
+<details>
+
+<summary>
 
 # API
+
+</summary>
 
 ## Login
 ```python
@@ -160,3 +174,5 @@ save `conversation_id` and `title` in to `self.conversations` and returns the ti
 
 #### removeConversation(index: int)
 delete conversation
+
+</details>

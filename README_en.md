@@ -3,12 +3,6 @@
 > For now, i can only provide terminal version. fastapi and web's version are not done yet since i'm quite busy these days.  
 > but the interfaces are the same.
 
-[//]: # ()
-[//]: # (> 2023.6.4-22:46: 今天为之后的大更新铺垫了很多，重新构建了整个框架，但是调整说明明天再说，这会太晚了)
-
-[//]: # ()
-[//]: # (> 2023.6.6-00:30: 依旧，加的东西蛮多的，明个有时间再讲，还遇到了棘手的问题，不过暂时找到了缓解的方法)
-
 Leave a ⭐ if you like it🥺
 
 ## Instructions
@@ -16,6 +10,8 @@ Leave a ⭐ if you like it🥺
 Hugging-chat's web api. The current model is `OpenAssistant/oasst-sft-6-llama-30b`.
 
 This video shows how to actually use it: https://www.bilibili.com/video/BV12h4y1G7Zc
+
+You can also check the [Documentation](./Doc_en.md) for how to use it
 
 ## Translator
 
@@ -89,7 +85,7 @@ Format: `/`+`command`
 
 | Command    |                                      |
 |------------|--------------------------------------|
-| exit       | exit the program                     |
+| exit/q     | exit the program                     |
 | ls         | list all conversations               |
 | cd <index> | cd into the chosen conversation      |
 | web        | activate `Search web` or not         |
