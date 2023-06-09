@@ -17,10 +17,10 @@ class Login:
 			# "Content-Type": "application/json",
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
 		}
-		self.proxies = {
-			"http": "http://127.0.0.1:7890",
-			"https": "http://127.0.0.1:7890"
-		}
+		# self.proxies = {
+		# 	"http": "http://127.0.0.1:7890",
+		# 	"https": "http://127.0.0.1:7890"
+		# }
 		self.cookies = requests.sessions.RequestsCookieJar()
 		self.mysql = mysql
 		if self.mysql:
@@ -54,7 +54,7 @@ class Login:
 			params=params, 
 			headers=self.headers, 
 			cookies=self.cookies, 
-			proxies=self.proxies,
+			# proxies=self.proxies,
 			allow_redirects=allow_redirects,
 			)
 		# if res.status_code == 200:
@@ -69,14 +69,14 @@ class Login:
 			data=data, 
 			headers=self.headers if headers == None else headers, 
 			cookies=self.cookies, 
-			proxies=self.proxies,
+			# proxies=self.proxies,
 			allow_redirects=allow_redirects
 			)
 		# if allow_redirects and res.status_code == 200:
 		self.refreshCookies(res.cookies)
 		return res
 				
-	def refreshCookies(self, cookies:requests.sessions.RequestsCookieJar):
+	def refreshCookies(self, cookies: requests.sessions.RequestsCookieJar):
 		dic = cookies.get_dict()
 		for i in dic:
 			self.cookies.set(i, dic[i])
@@ -89,7 +89,7 @@ class Login:
 		}
 		res = self.requestsPost(url=url, data=data, allow_redirects=False)
 		if res.status_code == 400:
-			raise Exception("用户名或密码错误")
+			raise Exception("Incorrect username or password\n用户名或密码错误")
 
 	def getAuthURL(self) -> str:
 		url = "https://huggingface.co/chat/login"

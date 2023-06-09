@@ -12,3 +12,4 @@ passlib
 pycurl
 typing
 rich
+urllib3

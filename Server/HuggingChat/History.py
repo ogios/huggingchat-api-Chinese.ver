@@ -1,3 +1,7 @@
+import time
+import traceback
+from threading import Thread
+
 
 class History_SQL:
 	def __init__(self, email, openAssistant):
@@ -6,10 +10,22 @@ class History_SQL:
 		from HuggingChat.SQL import User, Conversation
 		self.User = User
 		self.Conversation = Conversation
+		
+		def loop():
+			try:
+				while 1:
+					time.sleep(15)
+					# print("正在同步信息...")
+					self.synchronizeChatHistory()
+			except:
+				print("同步消息失效!")
+				traceback.print_exc()
+		self.synchronizeChatHistory()
+		Thread(target=loop, daemon=True).start()
 	
 	def getHistoriesByID(self, conversation_id):
 		'''
-		从在数据库中已保存的conversation中按用户名提取所有对话
+		Get conversation histories from database
 		:return: [{
 			"conversation_id"
 			"is_user"
@@ -30,10 +46,10 @@ class History_SQL:
 			})
 		return histories
 	
-	def getHistoyTextId(self):
+	def getHistoyTextId(self) -> list:
 		'''
-		从所有conversation中提取每句话的对话id
-		:return: List[对话id]
+		Get every text's unique uuid
+		:return: List[text_id]
 		'''
 		# histories:List[Conversation] = self.getHistories()
 		histories = self.Conversation.select(self.Conversation.text_id).where(self.Conversation.username == self.email).execute()
@@ -41,11 +57,10 @@ class History_SQL:
 	
 	def synchronizeChatHistory(self):
 		'''
-		根据huggingface服务器保存的对话记录保存至数据库中
-		:return: 无
+		request for every conversation's chat history
+		:return: None
 		'''
 		
-		# 单个用户所有记录
 		histories = []
 		existed_texts = self.getHistoyTextId()
 		for i in self.openAssistant.conversations:
@@ -83,7 +98,7 @@ class History:
 	
 	def getHistoriesByID(self, conversation_id):
 		'''
-		从在数据库中已保存的conversation中按用户名提取所有对话
+		
 		:return: [{
 			"conversation_id"
 			"is_user"

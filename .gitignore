@@ -11,6 +11,7 @@ backup/
 
 private.pem
 public.pem
+/Server/main_api.py
 
 #./Doc.md
 #./Doc_en.md

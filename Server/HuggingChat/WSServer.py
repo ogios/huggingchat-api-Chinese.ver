@@ -9,7 +9,7 @@ from websocket_server import WebsocketServer, WebSocketHandler
 
 
 def try_port(port):
-	"""获取可用的端口"""
+	"""Test if the port is available"""
 	tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	try:
 		tcp.bind(("", port))
@@ -28,13 +28,13 @@ def getRandomPort():
 			return port
 
 
-def get_free_tcp_port():
-	"""获取可用的端口"""
-	tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	tcp.bind(("", 0))
-	_, port = tcp.getsockname()
-	tcp.close()
-	return port
+# def get_free_tcp_port():
+# 	"""获取可用的端口"""
+# 	tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# 	tcp.bind(("", 0))
+# 	_, port = tcp.getsockname()
+# 	tcp.close()
+# 	return port
 
 
 class WSOut:

@@ -1,16 +1,11 @@
 import datetime
 import logging
-import time
-import traceback
 import uuid
-
-# import pycurl
 import requests
 import requests.utils
 import requests.sessions
 import json
 import re
-from threading import Thread
 
 from .WebSearch import WebSearch
 from .History import History_SQL, History
@@ -58,37 +53,24 @@ class OpenAssistant:
 	
 	def init(self):
 		'''
-		Open-Assistant接口初始化总方法：
-		1. 数据库中提取已保存cookies
-		2. 提取已有对话
-		3. 同步对话
+		Get conversation and initialize History()
 		:return: 无
 		'''
 		self.fetchConversations()
-		self.setTimeSynchronizeHistory()
+		# self.setTimeSynchronizeHistory()
+		self.History = History_SQL(self.email, self) if self.mysql else History(self.email, self)
 	
-	def setTimeSynchronizeHistory(self):
-		def loop():
-			try:
-				while 1:
-					time.sleep(15)
-					# print("正在同步信息...")
-					self.History.synchronizeChatHistory()
-			except:
-				print("同步消息失效!")
-				traceback.print_exc()
-		
-		if self.mysql:
-			self.History = History_SQL(self.email, self)
-			self.History.synchronizeChatHistory()
-			Thread(target=loop, daemon=True).start()
-		else:
-			self.History = History(self.email, self)
+	# def setTimeSynchronizeHistory(self):
+		# self.History = History_SQL(self.email, self) if self.mysql else History(self.email, self)
+		# if self.mysql:
+		# 	self.History = History_SQL(self.email, self)
+		# else:
+		# 	self.History = History(self.email, self)
 	
 	def fetchConversations(self):
 		'''
-		从 html 中提取 huggingface 服务器上已有的所有对话id
-		:return: 无，将conversation以 id 与 title 的键值对形式存储
+		Get conversation a from a html and extract them using re
+		:return:
 		'''
 		res = self.requestsGet(self.url_index)
 		html = res.text
@@ -103,9 +85,9 @@ class OpenAssistant:
 	
 	def requestsGet(self, url: str, params=None, stream=False) -> requests.Response:
 		'''
-		GET请求接口
-		:param url: url(必填)
-		:param params: params(非必须)
+		GET
+		:param url:
+		:param params:
 		:return: Response
 		'''
 		res = requests.get(
@@ -122,12 +104,12 @@ class OpenAssistant:
 	
 	def requestsPost(self, url: str, headers=None, params=None, data=None, stream=False) -> requests.Response:
 		'''
-		POST请求接口
-		:param url: url(必填)
+		POST
+		:param url:
 		:param params:
 		:param data:
-		:param stream: 流传输(默认不使用)
-		:return:
+		:param stream:
+		:return: Response
 		'''
 		res = requests.post(
 			url,
@@ -144,18 +126,18 @@ class OpenAssistant:
 	
 	def getUUID(self):
 		'''
-		随机生成对话标识id
-		:return: uuid的十六进制配上8-4-4-4-12的分隔
+		random uuid
+		:return: uuid hex with the format ’8-4-4-4-12‘
 		'''
 		uid = uuid.uuid4().hex
 		return f"{uid[:8]}-{uid[8:12]}-{uid[12:16]}-{uid[16:20]}-{uid[20:]}"
 	
 	def getData(self, text, web_search_id: str = ""):
 		'''
-		对话请求的data模板
+		Default data
 		:param web_search_id: web_search_id
-		:param text: 对话内容
-		:return: data本身
+		:param text:
+		:return: data
 		'''
 		data = {
 			"inputs": text,
@@ -187,6 +169,12 @@ class OpenAssistant:
 		return str(datetime.datetime.now())
 	
 	def parseData(self, res: requests.Response, conversation_id):
+		'''
+		Parser for EventStream
+		:param res: requests.post(stream=True) -> Response
+		:param conversation_id:
+		:return: Final reply
+		'''
 		if res.status_code != 200:
 			raise Exception(f"chat fatal: {res.status_code} - {res.text}")
 		reply = None
@@ -217,10 +205,11 @@ class OpenAssistant:
 	
 	def getReply(self, conversation_id, text, web_search_id: str = ""):
 		'''
-		对话入口
-		:param conversation_id: conversation_id
-		:param text: 语句
-		:return: 回复(使用流获取但并不以流形式返回)
+		Send message and Parse response
+		:param web_search_id: search id
+		:param conversation_id:
+		:param text:
+		:return: Reply text
 		'''
 		url = self.url_initConversation + f"/{conversation_id}"
 		reply = None
@@ -238,9 +227,9 @@ class OpenAssistant:
 	
 	def tranlate(self, text):
 		'''
-		将回复的英文翻译为英文，接口为有道
-		:param text:  英文文本
-		:return: 中文文本
+		Translate English -> Chinese
+		:param text:  English text
+		:return: Chinese text
 		'''
 		text = self.translater.translate(text)
 		return text
@@ -278,37 +267,47 @@ class OpenAssistant:
 	# 		print(e)
 	# 	return
 	#
-	def chatWeb(self, text: str, conversation_id=None) -> dict:
+	# def chatWeb(self, text: str, conversation_id=None):
+	# 	'''
+	# 	Start web search, parse for the final search id and implement it into chat data.
+	# 	:param text:
+	# 	:param conversation_id:
+	# 	:return:
+	# 	'''
+	# 	conversation_id = self.current_conversation if not conversation_id else conversation_id
+	# 	if not conversation_id:
+	# 		logging.info("No conversation selected")
+	# 		return None
+	# 	webUrl = self.url_initConversation + f"/{conversation_id}/web-search"
+	# 	js = WebSearch(webUrl + f"?prompt={text}", self.cookies.get_dict(), self.WSOut, conversation_id).getWebSearch()
+	# 	web_search_id = js["messages"][-1]["id"] if js else ""
+	# 	self.WSOut.sendMessage(status=True, msg=text, user="user", conversation_id=conversation_id)
+	# 	self.getReply(conversation_id, text, web_search_id)
+	
+	def chat(self, text: str, conversation_id=None, web=False):
+		'''
+		Normal chat, send message and wait for reply
+		:param web: use web search or not
+		:param conversation_id: conversation_id
+		:param text:
+		:return: None since the message will be send through websocket
+		'''
 		conversation_id = self.current_conversation if not conversation_id else conversation_id
 		if not conversation_id:
 			logging.info("No conversation selected")
 			return None
-		# webUrl = self.url_initConversation + f"/{conversation_id}/web-search?prompt={text}"
-		# print("")
-		webUrl = self.url_initConversation + f"/{conversation_id}/web-search"
-		# params = {
-		# 	"prompt": text
-		# }
-		# res = self.requestsGet(webUrl, params, stream=True)
-		# js = self.parseWebData(res, conversation_id)
-		js = WebSearch(webUrl + f"?prompt={text}", self.cookies.get_dict(), self.WSOut, conversation_id).getWebSearch()
-		web_search_id = js["messages"][-1]["id"] if js else ""
+		web_search_id = ""
+		if web:
+			webUrl = self.url_initConversation + f"/{conversation_id}/web-search"
+			js = WebSearch(
+				webUrl + f"?prompt={text}",
+				self.cookies.get_dict(),
+				self.WSOut,
+				conversation_id
+			).getWebSearch()
+			web_search_id = js["messages"][-1]["id"] if js else ""
 		self.WSOut.sendMessage(status=True, msg=text, user="user", conversation_id=conversation_id)
 		self.getReply(conversation_id, text, web_search_id)
-	
-	def chat(self, text: str, conversation_id=None):
-		'''
-		外都对话接口
-		:param conversation_id: conversation_id
-		:param text: 文本
-		:return: (英文文本, 中文文本)
-		'''
-		conversation_id = self.current_conversation if not conversation_id else conversation_id
-		if not conversation_id:
-			logging.info("No conversation selected")
-			return None
-		self.WSOut.sendMessage(status=True, msg=text, user="user", conversation_id=conversation_id)
-		self.getReply(conversation_id, text)
 	
 	# eng = self.getReply(conversation, text)
 	# if len(re.findall("[a-zA-Z]", eng)) > 0:
@@ -319,9 +318,9 @@ class OpenAssistant:
 	
 	def getTitle(self, conversation_id):
 		'''
-		获取该对话的标题
+		Get conversation summary
 		:param conversation_id:
-		:return: 标题文本
+		:return: title
 		'''
 		url = self.url_initConversation + f"/{conversation_id}/summarize"
 		res = self.requestsPost(url)
@@ -332,9 +331,10 @@ class OpenAssistant:
 	
 	def createConversation(self, text, web: bool=False):
 		'''
-		创建新对话, 需要先进行一次对话获取标题
-		:param text: 对话
-		:return: ((英文文本, 中文文本), (对话id, 对话标题))
+		start a new conversation
+		:param web: use web search or not
+		:param text:
+		:return: new conversation title
 		'''
 		data = {"model": self.model}
 		res = self.requestsPost(self.url_initConversation, data=json.dumps(data))
@@ -342,10 +342,7 @@ class OpenAssistant:
 			raise Exception("create conversation fatal")
 		js = res.json()
 		conversation_id = js["conversationId"]
-		if web:
-			self.chatWeb(text, conversation_id)
-		else:
-			self.chat(text, conversation_id)
+		self.chat(text, conversation_id, web=web)
 		title = self.getTitle(conversation_id)
 		if not title:
 			raise Exception("create conversation fatal")
@@ -356,7 +353,11 @@ class OpenAssistant:
 		return title
 	
 	def removeConversation(self, index: int):
-		# print(index)
+		'''
+		Remove conversation through the index of self.conversations
+		:param index:
+		:return:
+		'''
 		if not 0 <= index <= len(self.conversations) - 1:
 			logging.info("Index out of bounds\nindex超出范围")
 			return
@@ -389,6 +390,11 @@ class OpenAssistant:
 		return self.conversations
 	
 	def getTextFromInput(self, addition: str = ""):
+		'''
+		mainly use for command line to get text using input()
+		:param addition: text to be print out before the (converstation_id) >
+		:return:
+		'''
 		while 1:
 			text = input(f"{addition}({self.current_conversation}) > ")
 			if not text:
@@ -400,6 +406,10 @@ class OpenAssistant:
 		self.current_conversation = self.conversations[option]["id"]
 	
 	def printOutConversations(self):
+		'''
+		mainly for command line usage, return conversations in a formatted text.
+		:return:
+		'''
 		string = "* Conversations that have been established:\n* 已创建的对话: \n\n"
 		for i in range(len(self.conversations)):
 			string += f"	{i}. {self.conversations[i]['title']}\n"

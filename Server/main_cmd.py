@@ -73,9 +73,9 @@ def login(u, p=None, mysql=False, force=False):
 def updateMSG(js):
 	global FLAG
 	global LAST_STATEMENT
-	status = js["status"]  # status stands for whether the message complete or still generating.
-	msg = js["msg"]  # message it self with 'Typing...'.
-	user = js["user"]  # whether this message is sent by user or claude.
+	status = js["status"]
+	msg = js["msg"]
+	user = js["user"]
 	if status:
 		string = f"({color(user, 'green' if user == 'user' else 'blue')}): {msg}"
 		try:
@@ -94,7 +94,7 @@ def updateWebSearch(js: dict):
 	if js["type"] == "web_search" and js.__contains__("data"):
 		data: dict = js["data"]
 		if data["type"] == "update" and data.__contains__("message"):
-			string = f"* {data['message']}{' - '+str(data['args']) if data.__contains__('args') else ''}"
+			string = f"* {data['message']}{' - ' + str(data['args']) if data.__contains__('args') else ''}"
 			print(string)
 		elif data["type"] == "result":
 			print(f"* result - {data['id']}")
@@ -102,12 +102,7 @@ def updateWebSearch(js: dict):
 			logging.error(f"Wrong step: {js}")
 	else:
 		logging.error(f"Wrong step: {js}")
-		
-		
 
-
-# string = f"Web Search: {js['type']} - {js['message']}"
-# print(string)
 
 def startWSApp(url):
 	global WSA
@@ -115,12 +110,13 @@ def startWSApp(url):
 	def on_open(wsapp):
 		global WSA_OPEN
 		WSA_OPEN = True
+	
 	def on_message(wsapp, data):
 		data = json.loads(data)
 		type = data["type"]
 		if type == "text":
 			updateMSG(data)
-		if type == "web_search":
+		elif type == "web_search":
 			updateWebSearch(data)
 		elif type == "error":
 			print("error occurred: ", data["msg"])
@@ -146,7 +142,8 @@ def changeWeb_search():
 
 def newConversation(openassistant):
 	global FLAG
-	print("Input the first message you want to send (use `/exit` to get back): \n输入创建对话的第一个消息 (使用`/exit`退出新建对话): ")
+	print(
+		"Input the first message you want to send (use `/exit` to get back): \n输入创建对话的第一个消息 (使用`/exit`退出新建对话): ")
 	while 1:
 		text = openassistant.getTextFromInput("(new) ")
 		if text == "/exit":
@@ -199,7 +196,6 @@ def main():
 		p = getpass.getpass() if not PASSWD else PASSWD
 	else:
 		p = None
-
 	
 	cookies = login(u, p, mysql, force)
 	print(f"You are now logged in as <{u}>")
@@ -242,7 +238,12 @@ def main():
 					changeWeb_search()
 				elif command[0] == "eng":
 					if LAST_STATEMENT:
-						openassistant.WSOut.sendMessage(status=True, user="Open-Assistant", msg=LAST_STATEMENT, conversation_id=openassistant.current_conversation)
+						openassistant.WSOut.sendMessage(
+							status=True,
+							user="Open-Assistant",
+							msg=LAST_STATEMENT,
+							conversation_id=openassistant.current_conversation
+						)
 						FLAG = True
 					else:
 						print("No reply yet.\n暂无回复")
@@ -251,12 +252,10 @@ def main():
 					continue
 			else:
 				if not openassistant.current_conversation:
-					print("Please select or create a conversation using '/ls' and '/cd <int>' or '/new'.\n请使用 '/ls' 和 '/cd <int>' 或 '/new' 来进入或创建新对话")
+					print(
+						"Please select or create a conversation using '/ls' and '/cd <int>' or '/new'.\n请使用 '/ls' 和 '/cd <int>' 或 '/new' 来进入或创建新对话")
 					continue
-				if WEB_SEARCH:
-					openassistant.chatWeb(text)
-				else:
-					openassistant.chat(text)
+				openassistant.chat(text, web=WEB_SEARCH)
 				FLAG = True
 		except Exception as e:
 			traceback.print_exc()
