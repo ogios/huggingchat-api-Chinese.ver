@@ -16,7 +16,7 @@
 
 ## 对话内容
 传输格式如下：
-```json
+```javascript
 {
     "type": "text",
     "status": status,  // True(对话已完全生成) 或 False(仍未完全生成)
@@ -27,7 +27,7 @@
 ```
 
 ## 网络搜索步骤与内容
-```json
+```javascript
 {
     "type": "web_search",
     "data": data,   // data 中的 type 为 web_search 时即为搜索步骤，否则就是搜索失败或是模型超载
@@ -123,15 +123,21 @@ cookies: requests.sessions.RequestsCookieJar  = sign.loadCookies()
 | translater | YDTranslate.Translater.Translater | 翻译接口          |
 | mysql      | bool                              | 是否接入mysql     |
 
-#### init()
+<br/>
+
+- **init()**  
 运行 `OpenAssistant().fetchConversations()` 获取所有对话并初始化 `History()`.
 
-#### fetchConversations()
+<br/>
+
+- **fetchConversations()**  
 获取所有对话，并以 `[{"id":conversation_id, "title": title}, ...]` 的形式存入 `self.conversations`
 
-#### getData(text, web_search_id: str = "")
+<br/>
+
+- **getData(text, web_search_id: str = "")**  
 返回默认对话参数，我就不在这里解释每个参数的的意义了：
-```json
+```javascript
 {
     "inputs": text,
     "parameters": {
@@ -157,25 +163,38 @@ cookies: requests.sessions.RequestsCookieJar  = sign.loadCookies()
     "stream": true,
 }
 ```
-#### chat(text: str, conversation_id=None, web=False)
+
+<br/>
+
+- **chat(text: str, conversation_id=None, web=False)**  
 对话，当`conversation_id`为`None`时默认使用 `self.current_conversation`  
 通过 `getReply()` 等待并获取接收的消息   
 当web为True，调用 `WebSearch()` 进行网络搜索并传入 `search id`
 
-#### getReply()
+<br/>
+
+- **getReply()**  
 发送消息，并通过 `parseData()` 解析
 
-#### parseData()
+<br/>
+
+- **parseData()**  
 解析 `EventStream` 发送的内容并通过 `self.WSOut.sendMessage()` 发送
 
-#### getTitle(conversation_id)
+<br/>
+
+- **getTitle(conversation_id)**  
 获取当前对话的总结标题
 
-#### createConversation(text, web: bool=False)
+<br/>
+
+- **createConversation(text, web: bool=False)**  
 创建新对话，获取总结标题后添加至 `self.conversations` 中  
 返回总结标题
 
-#### removeConversation(index: int)
+<br/>
+
+- **removeConversation(index: int)**  
 删除对话
 
 </details>
