@@ -13,7 +13,7 @@ After `OpenAssistant()`, a WebSocket server with a random port is created
 Get the connection address by `OpenAssistant().wsurl`. default is broadcast and returns the local address
 
 ## Chat message content
-```json
+```javascript
 {
     "type": "text",
     "status": status,  // True(message generation complete) or False
@@ -24,7 +24,7 @@ Get the connection address by `OpenAssistant().wsurl`. default is broadcast and 
 ```
 
 ## Web search content
-```json
+```javascript
 {
     "type": "web_search",
     "data": data,   // data["type"]=="web_search" is for the steps of web search or else something wrong
@@ -118,16 +118,22 @@ cookies: requests.sessions.RequestsCookieJar  = sign.loadCookies()
 | translater | YDTranslate.Translater.Translater | translate api     |
 | mysql      | bool                              | use mysql or not  |
 
-#### init()
+<br/>
+
+- **init()**  
 run `fetchConversations()` to get conversations, and initialize `History()`.
 
-#### fetchConversations()
+<br/>
+
+- **fetchConversations()**  
 fetch every conversation and save them inside `self.conversations` with this format:  
 `[{"id":conversation_id, "title": title}, ...]`
 
-#### getData(text, web_search_id: str = "")
+<br/>
+
+- **getData(text, web_search_id: str = "")**  
 returns the default chat params
-```json
+```javascript
 {
     "inputs": text,
     "parameters": {
@@ -153,26 +159,39 @@ returns the default chat params
     "stream": true,
 }
 ```
-#### chat(text: str, conversation_id=None, web=False)
+
+<br/>
+
+- **chat(text: str, conversation_id=None, web=False)**  
 Chat.  
 use `self.current_conversation` if `conversation_id` is `None` 
 wait and get reply through `getReply()`   
 when `web` is set to True, use `WebSearch()` search prompt on web and send in `search id`
 
-#### getReply()
+<br/>
+
+- **getReply()**  
 send message to open-assistant，parse response using `parseData()`
 
-#### parseData()
+<br/>
+
+- **parseData()**  
 parse `EventStream` and forward message through `self.WSOut.sendMessage()`
 
-#### getTitle(conversation_id)
+<br/>
+
+- **getTitle(conversation_id)**  
 get summary title of the given conversation
 
-#### createConversation(text, web: bool=False)
+<br/>
+
+- **createConversation(text, web: bool=False)**  
 create a new conversation.  
 save `conversation_id` and `title` in to `self.conversations` and returns the title
 
-#### removeConversation(index: int)
+<br/>
+
+- **removeConversation(index: int)**  
 delete conversation
 
 </details>
